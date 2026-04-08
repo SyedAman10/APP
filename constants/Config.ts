@@ -10,7 +10,11 @@ export const Config = {
   APP_VERSION: '1.0.0',
   
   // Backend API Configuration
-  API_BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || 'https://5b54a16a5c98.ngrok-free.app',
+  API_BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || 'https://lumen8health.com',
+  BACKEND_URL:
+    process.env.EXPO_PUBLIC_BACKEND_URL ||
+    process.env.EXPO_PUBLIC_API_BASE_URL ||
+    'https://5b54a16a5c98.ngrok-free.app',
   
   // Chat Configuration
   MAX_CONVERSATION_HISTORY: 10,

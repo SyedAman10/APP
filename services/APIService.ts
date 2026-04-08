@@ -16,10 +16,12 @@ export interface APIRequestOptions {
 
 export class APIService {
   private baseURL: string;
+  private backendURL: string;
   private defaultHeaders: Record<string, string>;
 
   constructor(baseURL?: string) {
     this.baseURL = baseURL || Config.API_BASE_URL;
+    this.backendURL = Config.BACKEND_URL;
     this.defaultHeaders = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -40,7 +42,10 @@ export class APIService {
       timeout = 30000, // Increased timeout to 30 seconds
     } = options;
 
-    const url = `${this.baseURL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+    const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const resolvedBaseURL =
+      normalizedEndpoint.startsWith('/api/backend') ? this.backendURL : this.baseURL;
+    const url = `${resolvedBaseURL}${normalizedEndpoint}`;
     
     const requestHeaders = {
       ...this.defaultHeaders,
