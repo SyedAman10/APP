@@ -37,6 +37,38 @@ interface NormalizedProfileData {
   supportNeeds: string;
 }
 
+const toText = (value: unknown, fallback: string): string => {
+  if (typeof value === 'string' && value.trim().length > 0) {
+    return value.trim();
+  }
+  return fallback;
+};
+
+const normalizeProfileData = (rawData: any): NormalizedProfileData | null => {
+  if (!rawData) return null;
+
+  let profile = rawData;
+  // Backend can return nested payloads like { profile: { success, profile: {...} } }
+  for (let i = 0; i < 3; i += 1) {
+    if (profile?.profile) {
+      profile = profile.profile;
+    } else {
+      break;
+    }
+  }
+
+  return {
+    idol: toText(profile?.idol, 'your role model'),
+    personality: toText(profile?.personality, 'thoughtful'),
+    goals: toText(profile?.goals, 'personal growth'),
+    challenges: toText(profile?.challenges, 'daily stress'),
+    communicationStyle: toText(profile?.communicationStyle, 'supportive'),
+    interests: toText(profile?.interests, 'wellbeing'),
+    values: toText(profile?.values, 'balance'),
+    supportNeeds: toText(profile?.supportNeeds, 'encouragement'),
+  };
+};
+
 export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   const { user } = useAuth();
   const { onboardingData } = useOnboarding();
@@ -44,38 +76,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [aiService, setAIService] = useState<AIService | null>(null);
   const [isAIAvailable, setIsAIAvailable] = useState(false);
-
-  const toText = (value: unknown, fallback: string): string => {
-    if (typeof value === 'string' && value.trim().length > 0) {
-      return value.trim();
-    }
-    return fallback;
-  };
-
-  const normalizeProfileData = (rawData: any): NormalizedProfileData | null => {
-    if (!rawData) return null;
-
-    let profile = rawData;
-    // Backend can return nested payloads like { profile: { success, profile: {...} } }
-    for (let i = 0; i < 3; i += 1) {
-      if (profile?.profile) {
-        profile = profile.profile;
-      } else {
-        break;
-      }
-    }
-
-    return {
-      idol: toText(profile?.idol, 'your role model'),
-      personality: toText(profile?.personality, 'thoughtful'),
-      goals: toText(profile?.goals, 'personal growth'),
-      challenges: toText(profile?.challenges, 'daily stress'),
-      communicationStyle: toText(profile?.communicationStyle, 'supportive'),
-      interests: toText(profile?.interests, 'wellbeing'),
-      values: toText(profile?.values, 'balance'),
-      supportNeeds: toText(profile?.supportNeeds, 'encouragement'),
-    };
-  };
 
   // Initialize AI service
   React.useEffect(() => {
@@ -268,7 +268,7 @@ CRITICAL: You are not just inspired by ${idol} - you ARE ${idol} in this convers
         let fallbackResponse = "I understand how you're feeling. Let's work through this together.";
         
         if (profileData) {
-          const { idol, personality, goals, challenges, communicationStyle, supportNeeds } = profileData;
+          const { idol, personality, goals, challenges, supportNeeds } = profileData;
           
           fallbackResponse = generateIdolFallbackResponse(idol, personality, goals, challenges, supportNeeds);
         }

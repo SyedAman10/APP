@@ -17,7 +17,7 @@ export const Config = {
     'https://5b54a16a5c98.ngrok-free.app',
   
   // Chat Configuration
-  MAX_CONVERSATION_HISTORY: 10,
+  MAX_CONVERSATION_HISTORY: 4,
   DEFAULT_TEMPERATURE: 0.2,
   DEFAULT_MAX_TOKENS: 180,
 };
