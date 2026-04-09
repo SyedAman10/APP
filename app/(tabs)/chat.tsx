@@ -1,10 +1,11 @@
 import { LMN8Colors, LMN8Spacing, LMN8Typography } from '@/constants/LMN8DesignSystem';
-import { useAuth } from '@/contexts/AuthContext';
 import { useChat } from '@/contexts/ChatContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef, useState } from 'react';
 import {
     Dimensions,
+    KeyboardAvoidingView,
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -12,14 +13,15 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width, height } = Dimensions.get('window');
 
 export default function ChatScreen() {
-  const { user } = useAuth();
-  const { messages, isLoading, sendMessage, isAIAvailable } = useChat();
+  const { messages, isLoading, sendMessage } = useChat();
   const [inputText, setInputText] = useState('');
   const scrollViewRef = useRef<ScrollView>(null);
+  const insets = useSafeAreaInsets();
 
   const handleSendMessage = async () => {
     if (inputText.trim().length === 0) return;
@@ -71,7 +73,7 @@ export default function ChatScreen() {
       <View style={styles.floatingElement2} />
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View style={styles.headerContent}>
           <View style={styles.aiAvatar}>
             <Text style={styles.aiAvatarText}>🧠</Text>
@@ -83,84 +85,95 @@ export default function ChatScreen() {
         </View>
       </View>
 
-      {/* Messages */}
-      <ScrollView 
-        ref={scrollViewRef}
-        style={styles.messagesContainer}
-        contentContainerStyle={styles.messagesContent}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        style={styles.chatBody}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
       >
-        {messages.map((message, index) => (
-          <View
-            key={index}
-            style={[
-              styles.messageContainer,
-              message.role === 'user' ? styles.userMessage : styles.aiMessage,
-            ]}
-          >
+        {/* Messages */}
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.messagesContainer}
+          contentContainerStyle={styles.messagesContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          onContentSizeChange={() => {
+            scrollViewRef.current?.scrollToEnd({ animated: true });
+          }}
+        >
+          {messages.map((message, index) => (
             <View
+              key={index}
               style={[
-                styles.messageBubble,
-                message.role === 'user' ? styles.userBubble : styles.aiBubble,
+                styles.messageContainer,
+                message.role === 'user' ? styles.userMessage : styles.aiMessage,
               ]}
             >
-              <Text
+              <View
                 style={[
-                  styles.messageText,
-                  message.role === 'user' ? styles.userText : styles.aiText,
+                  styles.messageBubble,
+                  message.role === 'user' ? styles.userBubble : styles.aiBubble,
                 ]}
               >
-                {message.content}
-              </Text>
-              <Text
-                style={[
-                  styles.messageTime,
-                  message.role === 'user' ? styles.userTime : styles.aiTime,
-                ]}
-              >
-                {formatTime(new Date())}
-              </Text>
-            </View>
-          </View>
-        ))}
-        
-        {isLoading && (
-          <View style={[styles.messageContainer, styles.aiMessage]}>
-            <View style={[styles.messageBubble, styles.aiBubble]}>
-              <View style={styles.typingIndicator}>
-                <View style={styles.typingDot} />
-                <View style={styles.typingDot} />
-                <View style={styles.typingDot} />
+                <Text
+                  style={[
+                    styles.messageText,
+                    message.role === 'user' ? styles.userText : styles.aiText,
+                  ]}
+                >
+                  {message.content}
+                </Text>
+                <Text
+                  style={[
+                    styles.messageTime,
+                    message.role === 'user' ? styles.userTime : styles.aiTime,
+                  ]}
+                >
+                  {formatTime(new Date())}
+                </Text>
               </View>
             </View>
-          </View>
-        )}
-      </ScrollView>
+          ))}
 
-      {/* Input */}
-      <View style={styles.inputContainer}>
-        <View style={styles.inputWrapper}>
-          <TextInput
-            style={styles.textInput}
-            placeholder="Type your message..."
-            placeholderTextColor={LMN8Colors.text60}
-            value={inputText}
-            onChangeText={setInputText}
-            multiline
-            maxLength={500}
-          />
-          <TouchableOpacity
-            style={[
-              styles.sendButton,
-              inputText.trim().length === 0 && styles.sendButtonDisabled,
-            ]}
-            onPress={handleSendMessage}
-            disabled={inputText.trim().length === 0}
-          >
-            <Text style={styles.sendButtonText}>Send</Text>
-          </TouchableOpacity>
+          {isLoading && (
+            <View style={[styles.messageContainer, styles.aiMessage]}>
+              <View style={[styles.messageBubble, styles.aiBubble]}>
+                <View style={styles.typingIndicator}>
+                  <View style={styles.typingDot} />
+                  <View style={styles.typingDot} />
+                  <View style={styles.typingDot} />
+                </View>
+              </View>
+            </View>
+          )}
+        </ScrollView>
+
+        {/* Input */}
+        <View style={[styles.inputContainer, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.textInput}
+              placeholder="Type your message..."
+              placeholderTextColor={LMN8Colors.text60}
+              value={inputText}
+              onChangeText={setInputText}
+              multiline
+              maxLength={500}
+            />
+            <TouchableOpacity
+              style={[
+                styles.sendButton,
+                inputText.trim().length === 0 && styles.sendButtonDisabled,
+              ]}
+              onPress={handleSendMessage}
+              disabled={inputText.trim().length === 0}
+            >
+              <Text style={styles.sendButtonText}>Send</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -194,7 +207,6 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    paddingTop: 50, // Account for status bar
     paddingHorizontal: LMN8Spacing.lg,
     paddingBottom: LMN8Spacing.md,
     backgroundColor: `${LMN8Colors.container}95`,
@@ -237,6 +249,10 @@ const styles = StyleSheet.create({
     ...LMN8Typography.caption,
     color: LMN8Colors.text60,
     fontSize: 12,
+  },
+
+  chatBody: {
+    flex: 1,
   },
 
   messagesContainer: {
@@ -324,7 +340,6 @@ const styles = StyleSheet.create({
 
   inputContainer: {
     padding: LMN8Spacing.lg,
-    paddingBottom: 20, // Reduced padding for tab bar
     backgroundColor: `${LMN8Colors.container}95`,
     borderTopWidth: 1,
     borderTopColor: `${LMN8Colors.accentPrimary}20`,

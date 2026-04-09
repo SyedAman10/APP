@@ -26,6 +26,17 @@ interface ChatProviderProps {
   children: ReactNode;
 }
 
+interface NormalizedProfileData {
+  idol: string;
+  personality: string;
+  goals: string;
+  challenges: string;
+  communicationStyle: string;
+  interests: string;
+  values: string;
+  supportNeeds: string;
+}
+
 export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   const { user } = useAuth();
   const { onboardingData } = useOnboarding();
@@ -33,6 +44,38 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [aiService, setAIService] = useState<AIService | null>(null);
   const [isAIAvailable, setIsAIAvailable] = useState(false);
+
+  const toText = (value: unknown, fallback: string): string => {
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value.trim();
+    }
+    return fallback;
+  };
+
+  const normalizeProfileData = (rawData: any): NormalizedProfileData | null => {
+    if (!rawData) return null;
+
+    let profile = rawData;
+    // Backend can return nested payloads like { profile: { success, profile: {...} } }
+    for (let i = 0; i < 3; i += 1) {
+      if (profile?.profile) {
+        profile = profile.profile;
+      } else {
+        break;
+      }
+    }
+
+    return {
+      idol: toText(profile?.idol, 'your role model'),
+      personality: toText(profile?.personality, 'thoughtful'),
+      goals: toText(profile?.goals, 'personal growth'),
+      challenges: toText(profile?.challenges, 'daily stress'),
+      communicationStyle: toText(profile?.communicationStyle, 'supportive'),
+      interests: toText(profile?.interests, 'wellbeing'),
+      values: toText(profile?.values, 'balance'),
+      supportNeeds: toText(profile?.supportNeeds, 'encouragement'),
+    };
+  };
 
   // Initialize AI service
   React.useEffect(() => {
@@ -52,10 +95,10 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
 
   // Generate personalized welcome message when profile data is available
   React.useEffect(() => {
-    const profileData = user?.profile || onboardingData;
+    const profileData = normalizeProfileData(user?.profile || onboardingData);
     
     if (profileData && messages.length === 0) {
-      const { idol, personality, goals, communicationStyle, challenges, supportNeeds } = profileData;
+      const { idol, personality, goals, challenges, supportNeeds } = profileData;
       
       let welcomeMessage = generateIdolWelcomeMessage(idol, personality, goals, challenges, supportNeeds);
       
@@ -141,7 +184,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
 
   const generateSystemPrompt = (): string => {
     // Prioritize user profile data from backend, fallback to onboarding data
-    const profileData = user?.profile || onboardingData;
+    const profileData = normalizeProfileData(user?.profile || onboardingData);
     
     if (!profileData) {
       return `You are a supportive AI companion for a therapeutic app called LMN8. Be empathetic, encouraging, and helpful. Keep responses concise but meaningful.`;
@@ -221,7 +264,7 @@ CRITICAL: You are not just inspired by ${idol} - you ARE ${idol} in this convers
         setMessages(prev => [...prev, assistantMessage]);
       } else {
         // Fallback response when AI is not available
-        const profileData = user?.profile || onboardingData;
+        const profileData = normalizeProfileData(user?.profile || onboardingData);
         let fallbackResponse = "I understand how you're feeling. Let's work through this together.";
         
         if (profileData) {

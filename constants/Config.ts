@@ -2,8 +2,8 @@
 export const Config = {
   // AI API Configuration
   AI_API_KEY: process.env.EXPO_PUBLIC_AI_API_KEY || '',
-  AI_API_URL: process.env.EXPO_PUBLIC_AI_API_URL || 'https://api.publicai.co/v1',
-  AI_MODEL: process.env.EXPO_PUBLIC_AI_MODEL || 'swiss-ai/apertus-8b-instruct',
+  AI_API_URL: process.env.EXPO_PUBLIC_AI_API_URL || 'https://api.openai.com/v1',
+  AI_MODEL: process.env.EXPO_PUBLIC_AI_MODEL || 'gpt-4o-mini',
   
   // App Configuration
   APP_NAME: 'LMN8',
@@ -18,8 +18,8 @@ export const Config = {
   
   // Chat Configuration
   MAX_CONVERSATION_HISTORY: 10,
-  DEFAULT_TEMPERATURE: 0.7,
-  DEFAULT_MAX_TOKENS: 1000,
+  DEFAULT_TEMPERATURE: 0.2,
+  DEFAULT_MAX_TOKENS: 180,
 };
 
 // Validate required environment variables

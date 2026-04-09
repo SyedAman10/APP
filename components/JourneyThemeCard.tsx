@@ -1,8 +1,10 @@
 import { LMN8Colors, LMN8Spacing, LMN8Typography } from '@/constants/LMN8DesignSystem';
+import { loadJourneyThemePreferences } from '@/services/JourneyThemeService';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export type JourneyTheme = 'relief' | 'self-exploration' | 'anxiety-release' | 'mindfulness' | 'gratitude' | 'processing';
@@ -65,13 +67,18 @@ export const JourneyThemeCard: React.FC = () => {
   const [hasMusicEnabled, setHasMusicEnabled] = useState(false);
   const [hasScheduling, setHasScheduling] = useState(false);
 
-  useEffect(() => {
-    // TODO: Load saved preferences from AsyncStorage or API
-    // For now using defaults
-    setCurrentTheme('relief');
-    setHasMusicEnabled(false);
-    setHasScheduling(false);
+  const refreshPreferences = useCallback(async () => {
+    const preferences = await loadJourneyThemePreferences();
+    setCurrentTheme(preferences.theme);
+    setHasMusicEnabled(preferences.enableBackgroundMusic);
+    setHasScheduling(preferences.enableScheduling);
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshPreferences();
+    }, [refreshPreferences])
+  );
 
   const handlePress = () => {
     router.push('/(main)/journey-themes');

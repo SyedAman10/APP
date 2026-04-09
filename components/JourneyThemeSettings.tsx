@@ -1,10 +1,15 @@
 import { LMN8Alert } from '@/components/ui/LMN8Alert';
 import { LMN8Button } from '@/components/ui/LMN8Button';
 import { LMN8Colors, LMN8Spacing, LMN8Typography } from '@/constants/LMN8DesignSystem';
+import {
+  loadJourneyThemePreferences,
+  MusicPreference,
+  saveJourneyThemePreferences,
+} from '@/services/JourneyThemeService';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     ScrollView,
     StyleSheet,
@@ -23,12 +28,6 @@ interface ThemeOption {
   icon: keyof typeof Ionicons.glyphMap;
   color: string;
   gradient: string[];
-}
-
-interface MusicPreference {
-  name: string;
-  uri: string;
-  type: 'file' | 'spotify' | 'youtube' | 'apple-music';
 }
 
 const THEME_OPTIONS: ThemeOption[] = [
@@ -97,6 +96,20 @@ export const JourneyThemeSettings: React.FC = () => {
   const [showMusicOptions, setShowMusicOptions] = useState(false);
   const [enableBackgroundMusic, setEnableBackgroundMusic] = useState(false);
   const [showThemeInfo, setShowThemeInfo] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    const loadPreferences = async () => {
+      const preferences = await loadJourneyThemePreferences();
+      setSelectedTheme(preferences.theme);
+      setEnableScheduling(preferences.enableScheduling);
+      setScheduledTime(preferences.scheduledTime);
+      setMusicPreferences(preferences.musicPreferences);
+      setEnableBackgroundMusic(preferences.enableBackgroundMusic);
+    };
+
+    loadPreferences();
+  }, []);
 
   const handleThemeSelect = (themeId: JourneyTheme) => {
     setSelectedTheme(themeId);
@@ -131,8 +144,8 @@ export const JourneyThemeSettings: React.FC = () => {
     setMusicPreferences(updated);
   };
 
-  const handleSavePreferences = () => {
-    // TODO: Save all preferences to backend
+  const handleSavePreferences = async () => {
+    setIsSaving(true);
     const preferences = {
       theme: selectedTheme,
       enableScheduling,
@@ -140,8 +153,17 @@ export const JourneyThemeSettings: React.FC = () => {
       musicPreferences,
       enableBackgroundMusic,
     };
-    console.log('Saving preferences:', preferences);
-    alert('Journey preferences saved!');
+
+    try {
+      await saveJourneyThemePreferences(preferences);
+      console.log('Journey preferences saved:', preferences);
+      alert('Journey preferences saved!');
+    } catch (error) {
+      console.error('Failed to save journey preferences:', error);
+      alert('Could not save preferences. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const selectedThemeData = THEME_OPTIONS.find(t => t.id === selectedTheme);
@@ -374,6 +396,7 @@ export const JourneyThemeSettings: React.FC = () => {
           <LMN8Button
             title="Save Preferences"
             onPress={handleSavePreferences}
+            loading={isSaving}
             size="large"
             fullWidth
           />

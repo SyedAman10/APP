@@ -1,6 +1,7 @@
 import { LMN8BorderRadius, LMN8Colors, LMN8Spacing, LMN8Typography } from '@/constants/LMN8DesignSystem';
 import React, { useState } from 'react';
 import {
+    Platform,
     StyleSheet,
     Text,
     TextInput,
@@ -76,12 +77,14 @@ export const LMN8Input: React.FC<LMN8InputProps> = ({
         <TextInput
           style={[
             styles.input,
+            textInputProps.multiline ? styles.inputMultiline : styles.inputSingleLine,
             leftIcon ? styles.inputWithLeftIcon : null,
             rightIcon ? styles.inputWithRightIcon : null,
             inputStyle,
           ]}
           placeholder={placeholder}
           placeholderTextColor={LMN8Colors.text60}
+          includeFontPadding={Platform.OS === 'android' ? false : undefined}
           onFocus={handleFocus}
           onBlur={handleBlur}
           {...textInputProps}
@@ -161,6 +164,18 @@ const styles = StyleSheet.create({
     ...LMN8Typography.body,
     flex: 1,
     color: LMN8Colors.text100,
+    paddingVertical: 0,
+  },
+
+  inputSingleLine: {
+    minHeight: 24,
+    lineHeight: 22,
+    textAlignVertical: 'center',
+    paddingVertical: 10,
+  },
+
+  inputMultiline: {
+    textAlignVertical: 'top',
     paddingVertical: LMN8Spacing.md,
   },
   
