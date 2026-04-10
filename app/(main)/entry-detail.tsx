@@ -1,5 +1,6 @@
 import { LMN8Button } from '@/components/ui/LMN8Button';
 import { LMN8Colors, LMN8Spacing, LMN8Typography } from '@/constants/LMN8DesignSystem';
+import { JournalEntry as APIJournalEntry, journalAPI } from '@/services/APIService';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -21,7 +22,7 @@ interface JourneyEntry {
   id: string;
   title: string;
   content: string;
-  mediaType: 'text' | 'photo' | 'handwritten';
+  mediaType: 'text' | 'photo' | 'handwritten' | 'voice';
   mediaUrl?: string;
   transcribedText?: string;
   timestamp: string;
@@ -33,60 +34,46 @@ export default function EntryDetailScreen() {
   const { entryId } = useLocalSearchParams<{ entryId: string }>();
   const [entry, setEntry] = useState<JourneyEntry | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const normalizedEntryId = Array.isArray(entryId) ? entryId[0] : entryId;
 
   useEffect(() => {
     loadEntry();
   }, [entryId]);
 
+  const mapAPIEntryToJourneyEntry = (apiEntry: APIJournalEntry): JourneyEntry => ({
+    id: apiEntry.id || '',
+    title: apiEntry.title || 'Untitled Entry',
+    content: apiEntry.content || '',
+    mediaType: apiEntry.mediaType || 'text',
+    mediaUrl: apiEntry.mediaUrl,
+    transcribedText: apiEntry.transcribedText,
+    timestamp: apiEntry.createdAt || apiEntry.timestamp || new Date().toISOString(),
+    mood: apiEntry.mood,
+  });
+
   const loadEntry = async () => {
+    setIsLoading(true);
     try {
-      // TODO: Load entry from database using entryId
-      // For now, using mock data
-      const mockEntry: JourneyEntry = {
-        id: entryId || '1',
-        title: 'Morning Reflection',
-        content: 'Feeling grateful for the new day. The sun is shining and I feel hopeful about what lies ahead. Taking a moment to appreciate the small things in life.',
-        mediaType: 'text',
-        timestamp: new Date().toISOString(),
-        mood: 8,
-      };
-      setEntry(mockEntry);
+      if (!normalizedEntryId) {
+        setEntry(null);
+        return;
+      }
+
+      const response = await journalAPI.getEntry(normalizedEntryId);
+      if (response.success && response.data?.data) {
+        setEntry(mapAPIEntryToJourneyEntry(response.data.data));
+      } else {
+        console.error('Failed to load entry:', response.error);
+        setEntry(null);
+        Alert.alert('Error', response.error || 'Failed to load entry details');
+      }
     } catch (error) {
       console.error('Failed to load entry:', error);
+      setEntry(null);
       Alert.alert('Error', 'Failed to load entry details');
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleEdit = () => {
-    // TODO: Navigate to edit screen
-    Alert.alert('Edit', 'Edit functionality coming soon!');
-  };
-
-  const handleDelete = () => {
-    Alert.alert(
-      'Delete Entry',
-      'Are you sure you want to delete this entry? This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // TODO: Delete entry from database
-              console.log('Deleting entry:', entryId);
-              Alert.alert('Deleted', 'Entry has been deleted successfully');
-              router.back();
-            } catch (error) {
-              console.error('Failed to delete entry:', error);
-              Alert.alert('Error', 'Failed to delete entry');
-            }
-          },
-        },
-      ]
-    );
   };
 
   const getMediaTypeIcon = (mediaType: string): keyof typeof Ionicons.glyphMap => {
@@ -94,6 +81,7 @@ export default function EntryDetailScreen() {
       case 'text': return 'document-text-outline';
       case 'photo': return 'image-outline';
       case 'handwritten': return 'brush-outline';
+      case 'voice': return 'mic-outline';
       default: return 'document-outline';
     }
   };
@@ -103,6 +91,7 @@ export default function EntryDetailScreen() {
       case 'text': return 'Written';
       case 'photo': return 'Visual';
       case 'handwritten': return 'Handwritten';
+      case 'voice': return 'Voice Memo';
       default: return 'Entry';
     }
   };
@@ -112,6 +101,7 @@ export default function EntryDetailScreen() {
       case 'text': return LMN8Colors.accentPrimary;
       case 'photo': return LMN8Colors.accentSecondary;
       case 'handwritten': return LMN8Colors.accentHighlight;
+      case 'voice': return '#f472b6';
       default: return LMN8Colors.accentPrimary;
     }
   };
@@ -207,14 +197,6 @@ export default function EntryDetailScreen() {
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color={LMN8Colors.text85} />
           </TouchableOpacity>
-          <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.actionButton} onPress={handleEdit}>
-              <Ionicons name="create-outline" size={22} color={LMN8Colors.accentPrimary} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton} onPress={handleDelete}>
-              <Ionicons name="trash-outline" size={22} color={LMN8Colors.error} />
-            </TouchableOpacity>
-          </View>
         </View>
 
         {/* Entry Header Card */}
@@ -466,20 +448,6 @@ const styles = StyleSheet.create({
   },
 
   backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: `${LMN8Colors.container}80`,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  headerActions: {
-    flexDirection: 'row',
-    gap: LMN8Spacing.md,
-  },
-
-  actionButton: {
     width: 44,
     height: 44,
     borderRadius: 22,

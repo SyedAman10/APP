@@ -33,6 +33,48 @@ export interface ChatCompletionResponse {
   };
 }
 
+export interface AIUserProfile {
+  idol: string;
+  personality: string;
+  goals: string;
+  challenges: string;
+  communicationStyle: string;
+  interests: string;
+  values: string;
+  supportNeeds: string;
+}
+
+interface BackendAIMessageRequest {
+  message: string;
+  conversationHistory: {
+    role: 'user' | 'assistant';
+    content: string;
+  }[];
+  userProfile?: AIUserProfile;
+  temperature?: number;
+  maxTokens?: number;
+}
+
+interface BackendAIMessageResponse {
+  success?: boolean;
+  message?: string;
+  response?: string;
+  data?: {
+    message?: string;
+    response?: string;
+    choices?: {
+      message?: {
+        content?: string;
+      };
+    }[];
+  };
+  choices?: {
+    message?: {
+      content?: string;
+    };
+  }[];
+}
+
 export class AIService {
   private apiKey: string;
 
@@ -41,22 +83,27 @@ export class AIService {
   }
 
   async chatCompletion(
-    messages: ChatMessage[],
-    options?: Partial<ChatCompletionRequest>
+    message: string,
+    conversationHistory: ChatMessage[] = [],
+    options?: {
+      userProfile?: AIUserProfile;
+      temperature?: number;
+      maxTokens?: number;
+    }
   ): Promise<ChatCompletionResponse> {
-    const requestBody: ChatCompletionRequest = {
-      model: Config.AI_MODEL,
-      messages,
-      temperature: Config.DEFAULT_TEMPERATURE,
-      top_p: 0.9,
-      max_tokens: Config.DEFAULT_MAX_TOKENS,
-      ...options,
+    const requestBody: BackendAIMessageRequest = {
+      message,
+      conversationHistory: conversationHistory
+        .filter((msg) => msg.role === 'user' || msg.role === 'assistant')
+        .map((msg) => ({ role: msg.role as 'user' | 'assistant', content: msg.content })),
+      userProfile: options?.userProfile,
+      temperature: options?.temperature ?? Config.DEFAULT_TEMPERATURE,
+      maxTokens: options?.maxTokens ?? Config.DEFAULT_MAX_TOKENS,
     };
 
     try {
       console.log('🤖 Sending AI request with timeout:', 45000);
-      const response = await aiAPI.post<ChatCompletionResponse>('/chat/completions', requestBody, {
-        'Authorization': `Bearer ${this.apiKey}`,
+      const response = await aiAPI.post<BackendAIMessageResponse>('/api/backend/ai/message', requestBody, {
         'User-Agent': 'LMN8-App/1.0.0',
       });
 
@@ -70,7 +117,40 @@ export class AIService {
         throw new Error(response.error || `HTTP error! status: ${response.status}`);
       }
 
-      return response.data!;
+      // Support multiple backend response shapes while keeping the existing return contract.
+      const content =
+        response.data?.data?.message ||
+        response.data?.data?.response ||
+        response.data?.message ||
+        response.data?.response ||
+        response.data?.data?.choices?.[0]?.message?.content ||
+        response.data?.choices?.[0]?.message?.content;
+
+      if (!content) {
+        throw new Error('No response content returned from AI endpoint.');
+      }
+
+      return {
+        id: response.data?.data?.choices?.[0]?.message?.content ? 'backend-openai-style' : 'backend-message',
+        object: 'chat.completion',
+        created: Math.floor(Date.now() / 1000),
+        model: Config.AI_MODEL,
+        choices: [
+          {
+            index: 0,
+            message: {
+              role: 'assistant',
+              content,
+            },
+            finish_reason: 'stop',
+          },
+        ],
+        usage: {
+          prompt_tokens: 0,
+          completion_tokens: 0,
+          total_tokens: 0,
+        },
+      };
     } catch (error) {
       console.error('AI API Error:', error);
       if (error instanceof Error && error.message.includes('timeout')) {
@@ -83,29 +163,14 @@ export class AIService {
   async generateResponse(
     userMessage: string,
     conversationHistory: ChatMessage[] = [],
-    systemPrompt?: string
-  ): Promise<string> {
-    const messages: ChatMessage[] = [];
-
-    // Add system prompt if provided
-    if (systemPrompt) {
-      messages.push({
-        role: 'system',
-        content: systemPrompt,
-      });
+    options?: {
+      userProfile?: AIUserProfile;
+      temperature?: number;
+      maxTokens?: number;
     }
-
-    // Add conversation history
-    messages.push(...conversationHistory);
-
-    // Add current user message
-    messages.push({
-      role: 'user',
-      content: userMessage,
-    });
-
+  ): Promise<string> {
     try {
-      const response = await this.chatCompletion(messages);
+      const response = await this.chatCompletion(userMessage, conversationHistory, options);
       
       if (response.choices && response.choices.length > 0) {
         return response.choices[0].message.content;

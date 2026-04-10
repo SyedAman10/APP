@@ -247,12 +247,17 @@ CRITICAL: You are not just inspired by ${idol} - you ARE ${idol} in this convers
         // Get conversation history (last 10 messages)
         const conversationHistory = messages.slice(-Config.MAX_CONVERSATION_HISTORY);
         
-        // Generate AI response
-        const systemPrompt = generateSystemPrompt();
+        // Generate AI response with backend payload contract:
+        // message + conversationHistory + userProfile + temperature + maxTokens
+        const profileData = normalizeProfileData(user?.profile || onboardingData);
         const aiResponse = await aiService.generateResponse(
           message,
           conversationHistory,
-          systemPrompt
+          {
+            userProfile: profileData || undefined,
+            temperature: Config.DEFAULT_TEMPERATURE,
+            maxTokens: Config.DEFAULT_MAX_TOKENS,
+          }
         );
 
         // Add AI response

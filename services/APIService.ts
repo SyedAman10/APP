@@ -428,6 +428,19 @@ export interface JournalEntryResponse {
   message?: string;
 }
 
+export interface ClinicianSharingPreferences {
+  shareAIConversationSummary: boolean;
+  shareJournalEntrySummary: boolean;
+}
+
+export interface ClinicianSharingPreferencesResponse {
+  success?: boolean;
+  data?: ClinicianSharingPreferences;
+  shareAIConversationSummary?: boolean;
+  shareJournalEntrySummary?: boolean;
+  message?: string;
+}
+
 // Journal API methods
 export const journalAPI = {
   // Create new journal entry (POST)
@@ -462,5 +475,22 @@ export const journalAPI = {
   deleteEntry: async (id: string): Promise<APIResponse> => {
     console.log('🗑️ Deleting journal entry:', id);
     return api.delete(`/api/backend/journal/entries/${id}`);
+  },
+};
+
+// Clinician sharing preferences API methods
+export const clinicianSharingAPI = {
+  // Get clinician-sharing preferences (GET)
+  getPreferences: async (): Promise<APIResponse<ClinicianSharingPreferencesResponse>> => {
+    console.log('📖 Fetching clinician-sharing preferences');
+    return api.get('/api/backend/clinician-sharing/preferences');
+  },
+
+  // Update clinician-sharing preferences (PUT)
+  updatePreferences: async (
+    preferences: ClinicianSharingPreferences
+  ): Promise<APIResponse<ClinicianSharingPreferencesResponse>> => {
+    console.log('📝 Updating clinician-sharing preferences:', preferences);
+    return api.put('/api/backend/clinician-sharing/preferences', preferences);
   },
 };

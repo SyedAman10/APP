@@ -4,10 +4,11 @@ import { Milestone, MilestoneCard } from '@/components/MilestoneCard';
 import { LMN8Colors, LMN8Spacing, LMN8Typography } from '@/constants/LMN8DesignSystem';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOnboarding } from '@/contexts/OnboardingContext';
+import { clinicianSharingAPI, journalAPI } from '@/services/APIService';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
@@ -93,6 +94,8 @@ export default function HomeScreen() {
   const [currentStreak, setCurrentStreak] = useState(3); // TODO: Load from backend
   const [showCelebration, setShowCelebration] = useState(false);
   const [celebrationData, setCelebrationData] = useState<any>(null);
+  const [journalEntriesCount, setJournalEntriesCount] = useState(0);
+  const [showClinicianSharingWarning, setShowClinicianSharingWarning] = useState(false);
 
   // Set daily reflection based on day of year
   useEffect(() => {
@@ -105,6 +108,48 @@ export default function HomeScreen() {
     // Simulate achievement unlock
     // In real app, this would come from backend when user completes action
   }, []);
+
+  const loadHomeStats = async () => {
+    try {
+      // Fetch count + clinician sharing preferences in one pass.
+      const [journalResponse, sharingResponse] = await Promise.all([
+        journalAPI.getEntries(1, 1),
+        clinicianSharingAPI.getPreferences(),
+      ]);
+
+      if (journalResponse.success && journalResponse.data) {
+        const totalFromPagination = journalResponse.data.pagination?.total;
+        if (typeof totalFromPagination === 'number') {
+          setJournalEntriesCount(totalFromPagination);
+        } else {
+          setJournalEntriesCount(journalResponse.data.data?.length || 0);
+        }
+      } else {
+        console.error('Failed to load home journal stats:', journalResponse.error);
+      }
+
+      if (sharingResponse.success && sharingResponse.data) {
+        const preferences = sharingResponse.data.data;
+        const shareAIConversationSummary =
+          preferences?.shareAIConversationSummary ?? sharingResponse.data.shareAIConversationSummary ?? true;
+        const shareJournalEntrySummary =
+          preferences?.shareJournalEntrySummary ?? sharingResponse.data.shareJournalEntrySummary ?? true;
+
+        const isAnySummaryEnabled = shareAIConversationSummary || shareJournalEntrySummary;
+        setShowClinicianSharingWarning(!isAnySummaryEnabled);
+      } else {
+        console.error('Failed to load clinician-sharing status:', sharingResponse.error);
+      }
+    } catch (error) {
+      console.error('Failed to load home stats:', error);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadHomeStats();
+    }, [])
+  );
 
   // Get greeting based on time
   const getGreeting = () => {
@@ -186,6 +231,27 @@ export default function HomeScreen() {
           </LinearGradient>
         </View>
 
+        {showClinicianSharingWarning && (
+          <View style={styles.warningCard}>
+            <View style={styles.warningHeader}>
+              <Ionicons name="warning-outline" size={20} color="#f59e0b" />
+              <Text style={styles.warningTitle}>Clinician Summary Sharing Is Off</Text>
+            </View>
+            <Text style={styles.warningText}>
+              Turn on at least one summary in Settings so your clinician can understand your progress over time.
+              We only share summaries, never word-for-word conversations.
+            </Text>
+            <TouchableOpacity
+              style={styles.warningCTA}
+              onPress={() => router.push('/(tabs)/settings')}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.warningCTAText}>Open Settings</Text>
+              <Ionicons name="chevron-forward" size={16} color={LMN8Colors.text100} />
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Journey Progress */}
         <View style={styles.progressSection}>
           <View style={styles.sectionHeader}>
@@ -198,7 +264,7 @@ export default function HomeScreen() {
               <View style={styles.progressIconCircle}>
                 <Ionicons name="book-outline" size={22} color={LMN8Colors.accentPrimary} />
               </View>
-              <Text style={styles.progressNumber}>0</Text>
+              <Text style={styles.progressNumber}>{journalEntriesCount}</Text>
               <Text style={styles.progressLabel}>Journal Entries</Text>
             </View>
             
@@ -220,7 +286,8 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Streak & Progress */}
+        {/* Streak & Progress - temporarily hidden */}
+        {/*
         <View style={styles.streakSection}>
           <View style={styles.streakCard}>
             <LinearGradient
@@ -244,6 +311,7 @@ export default function HomeScreen() {
             </LinearGradient>
           </View>
         </View>
+        */}
 
         {/* Milestones & Achievements */}
         <View style={styles.milestonesSection}>
@@ -528,6 +596,57 @@ const styles = StyleSheet.create({
     color: LMN8Colors.text100,
     lineHeight: 32,
     fontStyle: 'italic',
+  },
+
+  warningCard: {
+    marginBottom: LMN8Spacing.xxl,
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.45)',
+    borderRadius: 16,
+    padding: LMN8Spacing.lg,
+  },
+
+  warningHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: LMN8Spacing.sm,
+    marginBottom: LMN8Spacing.sm,
+  },
+
+  warningTitle: {
+    ...LMN8Typography.body,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#fcd34d',
+    flex: 1,
+  },
+
+  warningText: {
+    ...LMN8Typography.body,
+    fontSize: 13,
+    lineHeight: 20,
+    color: LMN8Colors.text85,
+    marginBottom: LMN8Spacing.md,
+  },
+
+  warningCTA: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: LMN8Spacing.xs,
+    backgroundColor: 'rgba(245, 158, 11, 0.24)',
+    paddingHorizontal: LMN8Spacing.md,
+    paddingVertical: LMN8Spacing.sm,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.45)',
+  },
+
+  warningCTAText: {
+    ...LMN8Typography.button,
+    fontSize: 13,
+    color: LMN8Colors.text100,
   },
 
   // Progress Section - Encouraging and growth-oriented

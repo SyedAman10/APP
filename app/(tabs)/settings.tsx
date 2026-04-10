@@ -8,9 +8,10 @@ import { LMN8Colors, LMN8Spacing, LMN8Typography } from '@/constants/LMN8DesignS
 import { useAuth } from '@/contexts/AuthContext';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useVoiceStress } from '@/contexts/VoiceStressContext';
+import { clinicianSharingAPI, ClinicianSharingPreferences } from '@/services/APIService';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
-import React, { useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import {
     Alert,
     Dimensions,
@@ -39,6 +40,12 @@ export default function SettingsScreen() {
     talkToGuide
   } = useVoiceStress();
   const [showPasswordResetModal, setShowPasswordResetModal] = useState(false);
+  const [isPreferencesLoading, setIsPreferencesLoading] = useState(true);
+  const [isPreferencesSaving, setIsPreferencesSaving] = useState(false);
+  const [clinicianSharingPreferences, setClinicianSharingPreferences] = useState<ClinicianSharingPreferences>({
+    shareAIConversationSummary: true,
+    shareJournalEntrySummary: true,
+  });
 
   const handleLogout = () => {
     Alert.alert(
@@ -84,17 +91,67 @@ export default function SettingsScreen() {
     );
   };
 
-  const handlePrivacySettings = () => {
-    Alert.alert(
-      'Privacy Settings',
-      'Privacy controls will be available soon. You\'ll be able to manage data sharing and privacy preferences.',
-      [{ text: 'OK' }]
-    );
+  const loadClinicianSharingPreferences = async () => {
+    try {
+      setIsPreferencesLoading(true);
+      const response = await clinicianSharingAPI.getPreferences();
+
+      if (response.success && response.data) {
+        const preferencesFromData = response.data.data;
+        const shareAIConversationSummary =
+          preferencesFromData?.shareAIConversationSummary ?? response.data.shareAIConversationSummary ?? true;
+        const shareJournalEntrySummary =
+          preferencesFromData?.shareJournalEntrySummary ?? response.data.shareJournalEntrySummary ?? true;
+
+        setClinicianSharingPreferences({
+          shareAIConversationSummary,
+          shareJournalEntrySummary,
+        });
+      } else if (response.error) {
+        console.error('Failed to load clinician-sharing preferences:', response.error);
+      }
+    } catch (error) {
+      console.error('Failed to load clinician-sharing preferences:', error);
+    } finally {
+      setIsPreferencesLoading(false);
+    }
+  };
+
+  const handleClinicianPreferenceToggle = async (
+    key: keyof ClinicianSharingPreferences,
+    value: boolean
+  ) => {
+    const previousPreferences = clinicianSharingPreferences;
+    const updatedPreferences = {
+      ...previousPreferences,
+      [key]: value,
+    };
+
+    setClinicianSharingPreferences(updatedPreferences);
+    try {
+      setIsPreferencesSaving(true);
+      const response = await clinicianSharingAPI.updatePreferences(updatedPreferences);
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to update preferences');
+      }
+    } catch (error) {
+      console.error('Failed to update clinician-sharing preference:', error);
+      setClinicianSharingPreferences(previousPreferences);
+      Alert.alert('Update Failed', 'Could not update this preference. Please try again.');
+    } finally {
+      setIsPreferencesSaving(false);
+    }
   };
 
   const handlePasswordReset = () => {
     setShowPasswordResetModal(true);
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadClinicianSharingPreferences();
+    }, [])
+  );
 
   return (
     <View style={styles.container}>
@@ -209,14 +266,62 @@ export default function SettingsScreen() {
             </View>
 
             <View style={styles.settingDivider} />
-
-            <TouchableOpacity style={styles.settingItem} onPress={handlePrivacySettings}>
+            <View style={styles.settingItem}>
               <View style={styles.settingInfo}>
                 <Text style={styles.settingTitle}>Privacy Settings</Text>
-                <Text style={styles.settingDescription}>Manage data sharing</Text>
+                <Text style={styles.settingDescription}>Manage sharing preferences below</Text>
               </View>
-              <Text style={styles.settingArrow}>›</Text>
-            </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        {/* Clinician Sharing Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Clinician Sharing</Text>
+          <View style={styles.sectionCard}>
+            <View style={styles.infoNotice}>
+              <Text style={styles.infoNoticeTitle}>Share Progress Summaries with Your Clinician</Text>
+              <Text style={styles.infoNoticeText}>
+                These settings help your clinician understand how you are improving over time.
+                Only summaries are shared. Word-for-word conversations are not shared.
+              </Text>
+            </View>
+
+            <View style={styles.settingDivider} />
+
+            <View style={styles.settingItem}>
+              <View style={styles.settingInfo}>
+                <Text style={styles.settingTitle}>AI Conversation Summary</Text>
+                <Text style={styles.settingDescription}>
+                  Share summary insights from your AI chats with your clinician
+                </Text>
+              </View>
+              <Switch
+                value={clinicianSharingPreferences.shareAIConversationSummary}
+                onValueChange={(value) => handleClinicianPreferenceToggle('shareAIConversationSummary', value)}
+                trackColor={{ false: LMN8Colors.text60, true: LMN8Colors.accentPrimary }}
+                thumbColor="#ffffff"
+                disabled={isPreferencesLoading || isPreferencesSaving}
+              />
+            </View>
+
+            <View style={styles.settingDivider} />
+
+            <View style={styles.settingItem}>
+              <View style={styles.settingInfo}>
+                <Text style={styles.settingTitle}>Journal Entry Summary</Text>
+                <Text style={styles.settingDescription}>
+                  Share summary insights from your journal entries with your clinician
+                </Text>
+              </View>
+              <Switch
+                value={clinicianSharingPreferences.shareJournalEntrySummary}
+                onValueChange={(value) => handleClinicianPreferenceToggle('shareJournalEntrySummary', value)}
+                trackColor={{ false: LMN8Colors.text60, true: LMN8Colors.accentPrimary }}
+                thumbColor="#ffffff"
+                disabled={isPreferencesLoading || isPreferencesSaving}
+              />
+            </View>
           </View>
         </View>
 
@@ -378,6 +483,27 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: `${LMN8Colors.accentPrimary}20`,
     overflow: 'hidden',
+  },
+
+  infoNotice: {
+    backgroundColor: `${LMN8Colors.accentPrimary}10`,
+    paddingHorizontal: LMN8Spacing.lg,
+    paddingVertical: LMN8Spacing.md,
+  },
+
+  infoNoticeTitle: {
+    ...LMN8Typography.body,
+    fontSize: 14,
+    fontWeight: '600',
+    color: LMN8Colors.text100,
+    marginBottom: 6,
+  },
+
+  infoNoticeText: {
+    ...LMN8Typography.caption,
+    fontSize: 12,
+    lineHeight: 18,
+    color: LMN8Colors.text85,
   },
 
   profileInfo: {

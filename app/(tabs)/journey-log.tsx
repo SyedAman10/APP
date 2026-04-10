@@ -1,5 +1,4 @@
 import { LMN8Colors, LMN8Spacing, LMN8Typography } from '@/constants/LMN8DesignSystem';
-import { useDatabase } from '@/contexts/DatabaseContext';
 import { JournalEntry as APIJournalEntry, journalAPI } from '@/services/APIService';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,34 +20,38 @@ interface JourneyEntry {
   id: string;
   title: string;
   content: string;
-  mediaType: 'text' | 'photo' | 'handwritten';
+  mediaType: 'text' | 'photo' | 'handwritten' | 'voice';
   mediaUrl?: string;
   transcribedText?: string;
   timestamp: string;
   mood?: number;
 }
 
+const ENTRIES_PER_PAGE = 5;
+
 export default function JourneyLogScreen() {
   const router = useRouter();
-  const { databaseService } = useDatabase();
   const [entries, setEntries] = useState<JourneyEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalEntries, setTotalEntries] = useState(0);
 
   // Refetch entries every time the screen comes into focus
   useFocusEffect(
     useCallback(() => {
       console.log('🔄 Journey log screen focused - loading entries...');
-      loadEntries();
+      loadEntries(1);
     }, [])
   );
 
-  const loadEntries = async () => {
+  const loadEntries = async (page = 1) => {
     try {
       setIsLoading(true);
       console.log('📖 Loading journal entries from API...');
       
-      // Fetch entries from the API
-      const response = await journalAPI.getEntries();
+      // Fetch a paginated page from the API
+      const response = await journalAPI.getEntries(page, ENTRIES_PER_PAGE);
       
       if (response.success && response.data) {
         console.log('✅ Journal entries loaded successfully:', response.data);
@@ -67,16 +70,24 @@ export default function JourneyLogScreen() {
         }));
         
         setEntries(mappedEntries);
+        const pagination = response.data.pagination;
+        setCurrentPage(pagination?.page || page);
+        setTotalPages(pagination?.totalPages || 1);
+        setTotalEntries(pagination?.total || mappedEntries.length);
         console.log(`📊 Loaded ${mappedEntries.length} journal entries`);
       } else {
         console.error('❌ Failed to load entries:', response.error);
         Alert.alert('Error', response.error || 'Failed to load your journey entries');
         setEntries([]); // Set empty array on error
+        setTotalEntries(0);
+        setTotalPages(1);
       }
     } catch (error) {
       console.error('❌ Exception while loading entries:', error);
       Alert.alert('Error', 'An unexpected error occurred while loading your entries');
       setEntries([]); // Set empty array on error
+      setTotalEntries(0);
+      setTotalPages(1);
     } finally {
       setIsLoading(false);
     }
@@ -93,11 +104,24 @@ export default function JourneyLogScreen() {
     });
   };
 
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      loadEntries(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      loadEntries(currentPage + 1);
+    }
+  };
+
   const getMediaTypeIcon = (mediaType: string): keyof typeof Ionicons.glyphMap => {
     switch (mediaType) {
       case 'text': return 'document-text-outline';
       case 'photo': return 'image-outline';
       case 'handwritten': return 'brush-outline';
+      case 'voice': return 'mic-outline';
       default: return 'document-outline';
     }
   };
@@ -107,6 +131,7 @@ export default function JourneyLogScreen() {
       case 'text': return 'Written';
       case 'photo': return 'Visual';
       case 'handwritten': return 'Handwritten';
+      case 'voice': return 'Voice Memo';
       default: return 'Entry';
     }
   };
@@ -116,6 +141,7 @@ export default function JourneyLogScreen() {
       case 'text': return LMN8Colors.accentPrimary;
       case 'photo': return LMN8Colors.accentSecondary;
       case 'handwritten': return LMN8Colors.accentHighlight;
+      case 'voice': return '#f472b6';
       default: return LMN8Colors.accentPrimary;
     }
   };
@@ -232,7 +258,7 @@ export default function JourneyLogScreen() {
             end={{ x: 1, y: 1 }}
           >
             <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{entries.length}</Text>
+              <Text style={styles.statNumber}>{totalEntries}</Text>
               <Text style={styles.statLabel}>Total Entries</Text>
             </View>
             <View style={styles.statDivider} />
@@ -289,89 +315,119 @@ export default function JourneyLogScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          entries.map((entry) => (
-            <TouchableOpacity
-              key={entry.id}
-              style={styles.entryCard}
-              onPress={() => handleEntryPress(entry)}
-              activeOpacity={0.7}
-            >
-              <LinearGradient
-                colors={[`${LMN8Colors.container}98`, `${LMN8Colors.container}95`]}
-                style={styles.entryCardGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 0, y: 1 }}
+          <>
+            {entries.map((entry) => (
+              <TouchableOpacity
+                key={entry.id}
+                style={styles.entryCard}
+                onPress={() => handleEntryPress(entry)}
+                activeOpacity={0.7}
               >
-                {/* Entry Header */}
-                <View style={styles.entryHeader}>
-                  <View style={styles.entryHeaderLeft}>
-                    <View style={[
-                      styles.mediaTypeIconContainer,
-                      { backgroundColor: `${getMediaTypeColor(entry.mediaType)}15` }
-                    ]}>
-                      <Ionicons 
-                        name={getMediaTypeIcon(entry.mediaType)} 
-                        size={18} 
-                        color={getMediaTypeColor(entry.mediaType)} 
-                      />
-                    </View>
-                    <Text style={styles.mediaTypeLabel}>
-                      {getMediaTypeLabel(entry.mediaType)}
-                    </Text>
-                  </View>
-                  <Text style={styles.timestamp}>{formatDate(entry.timestamp)}</Text>
-                </View>
-
-                {/* Entry Title */}
-                <Text style={styles.entryTitle}>{entry.title}</Text>
-                
-                {/* Entry Content Preview */}
-                {entry.content && (
-                  <Text style={styles.entryContent} numberOfLines={3}>
-                    {entry.content}
-                  </Text>
-                )}
-
-                {/* Transcribed Text (if any) */}
-                {entry.transcribedText && (
-                  <View style={styles.transcribedContainer}>
-                    <View style={styles.transcribedHeader}>
-                      <Ionicons name="text-outline" size={14} color={LMN8Colors.accentSecondary} />
-                      <Text style={styles.transcribedLabel}>Transcribed</Text>
-                    </View>
-                    <Text style={styles.transcribedText} numberOfLines={2}>
-                      {entry.transcribedText}
-                    </Text>
-                  </View>
-                )}
-
-                {/* Entry Footer */}
-                <View style={styles.entryFooter}>
-                  {entry.mood && (
-                    <View style={styles.moodContainer}>
+                <LinearGradient
+                  colors={[`${LMN8Colors.container}98`, `${LMN8Colors.container}95`]}
+                  style={styles.entryCardGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 0, y: 1 }}
+                >
+                  {/* Entry Header */}
+                  <View style={styles.entryHeader}>
+                    <View style={styles.entryHeaderLeft}>
                       <View style={[
-                        styles.moodIconContainer,
-                        { backgroundColor: `${getMoodColor(entry.mood)}20` }
+                        styles.mediaTypeIconContainer,
+                        { backgroundColor: `${getMediaTypeColor(entry.mediaType)}15` }
                       ]}>
                         <Ionicons 
-                          name={getMoodIcon(entry.mood)} 
-                          size={16} 
-                          color={getMoodColor(entry.mood)} 
+                          name={getMediaTypeIcon(entry.mediaType)} 
+                          size={18} 
+                          color={getMediaTypeColor(entry.mediaType)} 
                         />
                       </View>
-                      <Text style={styles.moodText}>
-                        Mood: {entry.mood}/10
+                      <Text style={styles.mediaTypeLabel}>
+                        {getMediaTypeLabel(entry.mediaType)}
+                      </Text>
+                    </View>
+                    <Text style={styles.timestamp}>{formatDate(entry.timestamp)}</Text>
+                  </View>
+
+                  {/* Entry Title */}
+                  <Text style={styles.entryTitle}>{entry.title}</Text>
+                  
+                  {/* Entry Content Preview */}
+                  {entry.content && (
+                    <Text style={styles.entryContent} numberOfLines={3}>
+                      {entry.content}
+                    </Text>
+                  )}
+
+                  {/* Transcribed Text (if any) */}
+                  {entry.transcribedText && (
+                    <View style={styles.transcribedContainer}>
+                      <View style={styles.transcribedHeader}>
+                        <Ionicons name="text-outline" size={14} color={LMN8Colors.accentSecondary} />
+                        <Text style={styles.transcribedLabel}>Transcribed</Text>
+                      </View>
+                      <Text style={styles.transcribedText} numberOfLines={2}>
+                        {entry.transcribedText}
                       </Text>
                     </View>
                   )}
-                  <View style={styles.viewMore}>
-                    <Text style={styles.viewMoreText}>View Details</Text>
-                    <Ionicons name="arrow-forward" size={14} color={LMN8Colors.text60} />
+
+                  {/* Entry Footer */}
+                  <View style={styles.entryFooter}>
+                    {entry.mood && (
+                      <View style={styles.moodContainer}>
+                        <View style={[
+                          styles.moodIconContainer,
+                          { backgroundColor: `${getMoodColor(entry.mood)}20` }
+                        ]}>
+                          <Ionicons 
+                            name={getMoodIcon(entry.mood)} 
+                            size={16} 
+                            color={getMoodColor(entry.mood)} 
+                          />
+                        </View>
+                        <Text style={styles.moodText}>
+                          Mood: {entry.mood}/10
+                        </Text>
+                      </View>
+                    )}
+                    <View style={styles.viewMore}>
+                      <Text style={styles.viewMoreText}>View Details</Text>
+                      <Ionicons name="arrow-forward" size={14} color={LMN8Colors.text60} />
+                    </View>
                   </View>
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
-          ))
+                </LinearGradient>
+              </TouchableOpacity>
+            ))}
+
+            <View style={styles.paginationContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.paginationButton,
+                  (currentPage <= 1 || isLoading) && styles.paginationButtonDisabled,
+                ]}
+                onPress={handlePreviousPage}
+                disabled={currentPage <= 1 || isLoading}
+              >
+                <Text style={styles.paginationButtonText}>Back</Text>
+              </TouchableOpacity>
+
+              <Text style={styles.paginationText}>
+                Page {currentPage} of {totalPages}
+              </Text>
+
+              <TouchableOpacity
+                style={[
+                  styles.paginationButton,
+                  (currentPage >= totalPages || isLoading) && styles.paginationButtonDisabled,
+                ]}
+                onPress={handleNextPage}
+                disabled={currentPage >= totalPages || isLoading}
+              >
+                <Text style={styles.paginationButtonText}>Next</Text>
+              </TouchableOpacity>
+            </View>
+          </>
         )}
 
         {/* Bottom Padding */}
@@ -781,6 +837,45 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     color: LMN8Colors.text60,
+  },
+
+  paginationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: LMN8Spacing.lg,
+    marginBottom: LMN8Spacing.md,
+    gap: LMN8Spacing.md,
+  },
+
+  paginationButton: {
+    backgroundColor: `${LMN8Colors.accentPrimary}22`,
+    borderWidth: 1,
+    borderColor: `${LMN8Colors.accentPrimary}55`,
+    borderRadius: 12,
+    paddingVertical: LMN8Spacing.sm,
+    paddingHorizontal: LMN8Spacing.lg,
+    minWidth: 86,
+    alignItems: 'center',
+  },
+
+  paginationButtonDisabled: {
+    opacity: 0.45,
+  },
+
+  paginationButtonText: {
+    ...LMN8Typography.button,
+    color: LMN8Colors.text100,
+    fontSize: 13,
+  },
+
+  paginationText: {
+    ...LMN8Typography.metadata,
+    color: LMN8Colors.text85,
+    fontSize: 13,
+    fontWeight: '600',
+    flex: 1,
+    textAlign: 'center',
   },
 
   bottomPadding: {
