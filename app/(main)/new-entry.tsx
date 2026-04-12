@@ -15,6 +15,7 @@ import {
     Dimensions,
     Image,
     KeyboardAvoidingView,
+    Linking,
     Platform,
     ScrollView,
     StyleSheet,
@@ -288,14 +289,35 @@ export default function NewEntryScreen() {
    */
   const requestAudioPermission = async (): Promise<boolean> => {
     try {
-      const { status } = await Audio.requestPermissionsAsync();
+      const currentPermission = await Audio.getPermissionsAsync();
+      let status = currentPermission.status;
+      let canAskAgain = currentPermission.canAskAgain;
+
       if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Please allow microphone access to record voice memos.');
+        const requestResult = await Audio.requestPermissionsAsync();
+        status = requestResult.status;
+        canAskAgain = requestResult.canAskAgain;
+      }
+
+      if (status !== 'granted') {
+        if (!canAskAgain) {
+          Alert.alert(
+            'Microphone Access Needed',
+            'Microphone permission is blocked. Please enable it in iOS Settings to record voice memos.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Open Settings', onPress: () => Linking.openSettings() },
+            ]
+          );
+        } else {
+          Alert.alert('Permission Required', 'Please allow microphone access to record voice memos.');
+        }
         return false;
       }
       return true;
     } catch (error) {
       console.error('❌ Error requesting audio permission:', error);
+      Alert.alert('Error', 'Could not access microphone permissions. Please try again.');
       return false;
     }
   };
@@ -318,6 +340,7 @@ export default function NewEntryScreen() {
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
       });
 
       const { recording: newRecording } = await Audio.Recording.createAsync(
@@ -1081,6 +1104,7 @@ export default function NewEntryScreen() {
     <KeyboardAvoidingView 
       style={styles.container} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
       {/* Background with gradient overlay */}
       <LinearGradient
@@ -1105,6 +1129,8 @@ export default function NewEntryScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
       >
         {/* Header */}
         <View style={styles.header}>

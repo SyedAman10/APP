@@ -84,7 +84,6 @@ export const LMN8Input: React.FC<LMN8InputProps> = ({
           ]}
           placeholder={placeholder}
           placeholderTextColor={LMN8Colors.text60}
-          includeFontPadding={Platform.OS === 'android' ? false : undefined}
           onFocus={handleFocus}
           onBlur={handleBlur}
           {...textInputProps}
@@ -171,7 +170,7 @@ const styles = StyleSheet.create({
     minHeight: 24,
     lineHeight: 22,
     textAlignVertical: 'center',
-    paddingVertical: 10,
+    paddingVertical: Platform.OS === 'android' ? 8 : 10,
   },
 
   inputMultiline: {
