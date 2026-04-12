@@ -252,6 +252,32 @@ export default function HomeScreen() {
           </View>
         )}
 
+        <TouchableOpacity
+          style={styles.summaryAccessCard}
+          onPress={() => router.push('/(main)/clinician-summaries')}
+          activeOpacity={0.8}
+        >
+          <LinearGradient
+            colors={[`${LMN8Colors.accentSecondary}25`, `${LMN8Colors.accentSecondary}12`]}
+            style={styles.summaryAccessGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <View style={styles.summaryAccessLeft}>
+              <View style={styles.summaryAccessIcon}>
+                <Ionicons name="document-text-outline" size={22} color={LMN8Colors.accentSecondary} />
+              </View>
+              <View style={styles.summaryAccessTextWrap}>
+                <Text style={styles.summaryAccessTitle}>Conversation Summaries</Text>
+                <Text style={styles.summaryAccessText}>
+                  See what your clinician can view from your AI conversation summaries.
+                </Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={LMN8Colors.text85} />
+          </LinearGradient>
+        </TouchableOpacity>
+
         {/* Journey Progress */}
         <View style={styles.progressSection}>
           <View style={styles.sectionHeader}>
@@ -647,6 +673,58 @@ const styles = StyleSheet.create({
     ...LMN8Typography.button,
     fontSize: 13,
     color: LMN8Colors.text100,
+  },
+
+  summaryAccessCard: {
+    marginBottom: LMN8Spacing.xxl,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+
+  summaryAccessGradient: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: `${LMN8Colors.accentSecondary}35`,
+    padding: LMN8Spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: LMN8Spacing.md,
+  },
+
+  summaryAccessLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: LMN8Spacing.md,
+    flex: 1,
+  },
+
+  summaryAccessIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: `${LMN8Colors.accentSecondary}22`,
+  },
+
+  summaryAccessTextWrap: {
+    flex: 1,
+  },
+
+  summaryAccessTitle: {
+    ...LMN8Typography.body,
+    color: LMN8Colors.text100,
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+
+  summaryAccessText: {
+    ...LMN8Typography.caption,
+    color: LMN8Colors.text85,
+    fontSize: 12,
+    lineHeight: 17,
   },
 
   // Progress Section - Encouraging and growth-oriented

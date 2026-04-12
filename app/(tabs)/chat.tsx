@@ -5,7 +5,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
     Dimensions,
     KeyboardAvoidingView,
+    Modal,
     Platform,
+    Pressable,
     ScrollView,
     StyleSheet,
     Text,
@@ -18,8 +20,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const { width, height } = Dimensions.get('window');
 
 export default function ChatScreen() {
-  const { messages, isLoading, sendMessage } = useChat();
+  const {
+    messages,
+    isLoading,
+    isCreatingSession,
+    sessions,
+    currentSessionId,
+    activeSessionId,
+    sessionSummary,
+    sendMessage,
+    createNewSession,
+    loadSession,
+  } = useChat();
   const [inputText, setInputText] = useState('');
+  const [isDrawerVisible, setIsDrawerVisible] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const insets = useSafeAreaInsets();
 
@@ -52,6 +66,18 @@ export default function ChatScreen() {
     });
   };
 
+  const handleNewSession = async () => {
+    setInputText('');
+    setIsDrawerVisible(false);
+    await createNewSession();
+  };
+
+  const handleSelectSession = async (sessionId: string) => {
+    setInputText('');
+    await loadSession(sessionId);
+    setIsDrawerVisible(false);
+  };
+
   return (
     <View style={styles.container}>
       {/* Background with gradient overlay */}
@@ -75,15 +101,100 @@ export default function ChatScreen() {
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View style={styles.headerContent}>
+          <TouchableOpacity
+            style={styles.hamburgerButton}
+            onPress={() => setIsDrawerVisible(true)}
+          >
+            <View style={styles.hamburgerIcon}>
+              <View style={styles.hamburgerLine} />
+              <View style={styles.hamburgerLine} />
+              <View style={styles.hamburgerLine} />
+            </View>
+          </TouchableOpacity>
           <View style={styles.aiAvatar}>
-            <Text style={styles.aiAvatarText}>🧠</Text>
+            <Text style={styles.aiAvatarText}>AI</Text>
           </View>
           <View style={styles.headerText}>
             <Text style={styles.headerTitle}>AI Companion</Text>
             <Text style={styles.headerSubtitle}>Always here to listen and help</Text>
           </View>
+          <TouchableOpacity
+            style={styles.newSessionButton}
+            onPress={handleNewSession}
+            disabled={isCreatingSession || isLoading}
+          >
+            <Text style={styles.newSessionButtonText}>
+              {isCreatingSession ? '...' : 'New Chat'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.sessionInfoContainer}>
+          {currentSessionId ? (
+            <>
+              <Text style={styles.sessionInfoTitle}>Chat #{currentSessionId}</Text>
+              {sessionSummary ? (
+                <Text style={styles.sessionInfoSummary} numberOfLines={1}>
+                  {sessionSummary}
+                </Text>
+              ) : null}
+            </>
+          ) : (
+            <Text style={styles.sessionInfoSummary}>A new chat will be created with your next message.</Text>
+          )}
         </View>
       </View>
+
+      <Modal
+        visible={isDrawerVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsDrawerVisible(false)}
+      >
+        <View style={styles.drawerRoot}>
+          <Pressable style={styles.drawerOverlay} onPress={() => setIsDrawerVisible(false)} />
+          <View style={[styles.drawerPanel, { paddingTop: insets.top + 16 }]}>
+            <View style={styles.drawerHeader}>
+              <Text style={styles.drawerTitle}>Past Chats</Text>
+              <TouchableOpacity onPress={() => setIsDrawerVisible(false)}>
+                <Text style={styles.drawerClose}>Close</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              style={styles.drawerList}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.drawerListContent}
+            >
+              {sessions.length === 0 ? (
+                <Text style={styles.drawerEmptyText}>No previous chats yet.</Text>
+              ) : (
+                sessions.map((session) => (
+                  <TouchableOpacity
+                    key={session.sessionId}
+                    style={[
+                      styles.sessionItem,
+                      session.sessionId === activeSessionId && styles.sessionItemActive,
+                    ]}
+                    onPress={() => handleSelectSession(session.sessionId)}
+                  >
+                    <Text style={styles.sessionItemTitle} numberOfLines={1}>
+                      {session.title}
+                    </Text>
+                    <Text style={styles.sessionItemMeta} numberOfLines={1}>
+                      {session.messageCount} messages
+                    </Text>
+                    {session.summary ? (
+                      <Text style={styles.sessionItemSummary} numberOfLines={2}>
+                        {session.summary}
+                      </Text>
+                    ) : null}
+                  </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       <KeyboardAvoidingView
         style={styles.chatBody}
@@ -219,6 +330,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
+  hamburgerButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: `${LMN8Colors.accentPrimary}45`,
+    backgroundColor: `${LMN8Colors.accentPrimary}18`,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: LMN8Spacing.sm,
+  },
+
+  hamburgerIcon: {
+    width: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 2.5,
+  },
+
+  hamburgerLine: {
+    width: 14,
+    height: 2,
+    borderRadius: 2,
+    backgroundColor: LMN8Colors.text100,
+  },
+
   aiAvatar: {
     width: 50,
     height: 50,
@@ -237,6 +374,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
+  newSessionButton: {
+    backgroundColor: `${LMN8Colors.accentPrimary}25`,
+    borderWidth: 1,
+    borderColor: `${LMN8Colors.accentPrimary}45`,
+    borderRadius: 12,
+    paddingHorizontal: LMN8Spacing.sm,
+    paddingVertical: 6,
+  },
+
+  newSessionButtonText: {
+    ...LMN8Typography.caption,
+    color: LMN8Colors.text100,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+
   headerTitle: {
     ...LMN8Typography.h3,
     fontSize: 18,
@@ -251,8 +404,117 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
 
+  sessionInfoContainer: {
+    marginTop: LMN8Spacing.sm,
+    paddingTop: LMN8Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: `${LMN8Colors.accentPrimary}15`,
+  },
+
+  sessionInfoTitle: {
+    ...LMN8Typography.metadata,
+    color: LMN8Colors.accentPrimary,
+    fontSize: 11,
+    marginBottom: 2,
+  },
+
+  sessionInfoSummary: {
+    ...LMN8Typography.caption,
+    color: LMN8Colors.text85,
+    fontSize: 11,
+  },
+
   chatBody: {
     flex: 1,
+  },
+
+  drawerRoot: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+
+  drawerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+  },
+
+  drawerPanel: {
+    width: Math.min(width * 0.82, 340),
+    backgroundColor: `${LMN8Colors.container}F8`,
+    borderLeftWidth: 1,
+    borderLeftColor: `${LMN8Colors.accentPrimary}25`,
+    paddingHorizontal: LMN8Spacing.md,
+    paddingBottom: LMN8Spacing.lg,
+  },
+
+  drawerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: LMN8Spacing.md,
+  },
+
+  drawerTitle: {
+    ...LMN8Typography.h3,
+    color: LMN8Colors.text100,
+    fontSize: 18,
+    fontWeight: '600',
+  },
+
+  drawerClose: {
+    ...LMN8Typography.caption,
+    color: LMN8Colors.accentPrimary,
+    fontWeight: '700',
+  },
+
+  drawerList: {
+    flex: 1,
+  },
+
+  drawerListContent: {
+    paddingBottom: LMN8Spacing.xl,
+  },
+
+  drawerEmptyText: {
+    ...LMN8Typography.body,
+    color: LMN8Colors.text60,
+    marginTop: LMN8Spacing.md,
+  },
+
+  sessionItem: {
+    backgroundColor: `${LMN8Colors.bgDark}A8`,
+    borderWidth: 1,
+    borderColor: `${LMN8Colors.accentPrimary}25`,
+    borderRadius: 14,
+    padding: LMN8Spacing.md,
+    marginBottom: LMN8Spacing.sm,
+  },
+
+  sessionItemActive: {
+    borderColor: `${LMN8Colors.accentPrimary}75`,
+    backgroundColor: `${LMN8Colors.accentPrimary}16`,
+  },
+
+  sessionItemTitle: {
+    ...LMN8Typography.label,
+    color: LMN8Colors.text100,
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+
+  sessionItemMeta: {
+    ...LMN8Typography.caption,
+    color: LMN8Colors.text60,
+    fontSize: 11,
+    marginBottom: 4,
+  },
+
+  sessionItemSummary: {
+    ...LMN8Typography.caption,
+    color: LMN8Colors.text85,
+    fontSize: 12,
+    lineHeight: 16,
   },
 
   messagesContainer: {
@@ -385,3 +647,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
+

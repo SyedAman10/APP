@@ -441,6 +441,27 @@ export interface ClinicianSharingPreferencesResponse {
   message?: string;
 }
 
+export type ClinicianSummaryType = 'ai_conversation' | 'journal_entry';
+
+export interface ClinicianSummary {
+  id: string;
+  userId: string;
+  summaryType: ClinicianSummaryType;
+  summaryText: string;
+  sourceId?: string;
+  createdAt: string;
+}
+
+export interface ClinicianSummariesResponse {
+  success: boolean;
+  data: ClinicianSummary[];
+  pagination?: {
+    limit: number;
+    offset: number;
+    count: number;
+  };
+}
+
 // Journal API methods
 export const journalAPI = {
   // Create new journal entry (POST)
@@ -492,5 +513,19 @@ export const clinicianSharingAPI = {
   ): Promise<APIResponse<ClinicianSharingPreferencesResponse>> => {
     console.log('📝 Updating clinician-sharing preferences:', preferences);
     return api.put('/api/backend/clinician-sharing/preferences', preferences);
+  },
+
+  // Get shared clinician summaries (GET)
+  getSummaries: async (
+    summaryType: ClinicianSummaryType = 'ai_conversation',
+    limit = 20,
+    offset = 0
+  ): Promise<APIResponse<ClinicianSummariesResponse>> => {
+    console.log('📖 Fetching clinician-sharing summaries:', { summaryType, limit, offset });
+    const queryParams = new URLSearchParams();
+    queryParams.append('summaryType', summaryType);
+    queryParams.append('limit', limit.toString());
+    queryParams.append('offset', offset.toString());
+    return api.get(`/api/backend/clinician-sharing/summaries?${queryParams.toString()}`);
   },
 };

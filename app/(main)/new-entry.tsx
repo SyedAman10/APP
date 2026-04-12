@@ -91,20 +91,21 @@ export default function NewEntryScreen() {
       description: 'Record your thoughts aloud',
       color: '#f59e0b',
     },
-    {
-      type: 'photo',
-      icon: 'image-outline',
-      label: 'Visual',
-      description: 'Capture a moment in time',
-      color: LMN8Colors.accentSecondary,
-    },
-    {
-      type: 'handwritten',
-      icon: 'brush-outline',
-      label: 'Handwritten',
-      description: 'Journal entry with transcription',
-      color: LMN8Colors.accentHighlight,
-    },
+    // Temporarily hidden per product request
+    // {
+    //   type: 'photo',
+    //   icon: 'image-outline',
+    //   label: 'Visual',
+    //   description: 'Capture a moment in time',
+    //   color: LMN8Colors.accentSecondary,
+    // },
+    // {
+    //   type: 'handwritten',
+    //   icon: 'brush-outline',
+    //   label: 'Handwritten',
+    //   description: 'Journal entry with transcription',
+    //   color: LMN8Colors.accentHighlight,
+    // },
   ];
 
   const handleMediaTypeSelect = (type: MediaType) => {
@@ -377,6 +378,11 @@ export default function NewEntryScreen() {
       console.log('✅ Recording stopped:', uri, 'Duration:', duration, 'seconds');
       
       if (uri) {
+        if (sound) {
+          await sound.unloadAsync();
+          setSound(null);
+          setIsPlaying(false);
+        }
         setFormData(prev => ({ 
           ...prev, 
           audioUri: uri,
@@ -434,9 +440,14 @@ export default function NewEntryScreen() {
         await sound.pauseAsync();
         setIsPlaying(false);
       } else if (sound && !isPlaying) {
-        // Resume
-        console.log('▶️ Resuming playback');
-        await sound.playAsync();
+        // Resume, or replay from start if playback reached the end.
+        console.log('Resuming playback');
+        const status = await sound.getStatusAsync();
+        if (status.isLoaded && status.durationMillis && status.positionMillis >= status.durationMillis) {
+          await sound.replayAsync();
+        } else {
+          await sound.playAsync();
+        }
         setIsPlaying(true);
       } else {
         // Start new playback
@@ -447,6 +458,7 @@ export default function NewEntryScreen() {
           (status) => {
             if (status.isLoaded && status.didJustFinish) {
               setIsPlaying(false);
+              newSound.setPositionAsync(0).catch(() => {});
             }
           }
         );
@@ -471,8 +483,14 @@ export default function NewEntryScreen() {
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
-        console.log('🎵 Audio file selected:', asset.uri);
-        
+        console.log('Audio file selected:', asset.uri);
+
+        if (sound) {
+          await sound.unloadAsync();
+          setSound(null);
+          setIsPlaying(false);
+        }
+
         setFormData(prev => ({ 
           ...prev, 
           audioUri: asset.uri,
@@ -497,6 +515,12 @@ export default function NewEntryScreen() {
         Alert.alert('Missing Content', 'Please add an image or some content to your entry');
         return false;
       }
+    } else if (selectedMediaType === 'voice') {
+      // Voice entries can be saved with audio only (typed text optional).
+      if (!formData.audioUri && !formData.content.trim()) {
+        Alert.alert('Missing Content', 'Please record/upload audio or add some text to your entry');
+        return false;
+      }
     } else {
       // For text entries, content is required
       if (!formData.content.trim()) {
@@ -513,14 +537,18 @@ export default function NewEntryScreen() {
 
     setIsSubmitting(true);
     try {
+      const normalizedContent =
+        formData.content.trim() ||
+        (selectedMediaType === 'voice' && formData.audioUri ? 'Voice memo entry' : '');
+
       // Prepare entry data for API
       const entryData: JournalEntryCreateRequest = {
         title: formData.title,
-        content: formData.content,
+        content: normalizedContent,
         mediaType: selectedMediaType,
         mood: formData.mood,
-        // Include image URI if present (backend will need to handle file upload)
-        mediaUrl: formData.imageUri,
+        // Include media URI (image for photo/handwritten, audio for voice)
+        mediaUrl: selectedMediaType === 'voice' ? formData.audioUri : formData.imageUri,
         // Include transcribed text for handwritten entries
         transcribedText: formData.transcribedText,
       };
@@ -1391,15 +1419,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: `${LMN8Colors.accentPrimary}20`,
     borderRadius: 16,
-    padding: LMN8Spacing.lg,
+    paddingHorizontal: LMN8Spacing.lg,
+    paddingVertical: Platform.OS === 'android' ? LMN8Spacing.md : LMN8Spacing.lg,
     color: LMN8Colors.text100,
     fontSize: 15,
     minHeight: 52,
+    lineHeight: 20,
+    textAlignVertical: 'center',
   },
 
   textInputMultiline: {
     minHeight: 120,
     paddingTop: LMN8Spacing.lg,
+    paddingBottom: LMN8Spacing.lg,
+    lineHeight: 22,
     textAlignVertical: 'top',
   },
 
@@ -1812,3 +1845,6 @@ const styles = StyleSheet.create({
     color: LMN8Colors.text85,
   },
 });
+
+
+

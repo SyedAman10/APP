@@ -1,15 +1,43 @@
-import { Config, validateConfig } from '@/constants/Config';
+import { Config } from '@/constants/Config';
 import { AIService, ChatMessage } from '@/services/AIService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, ReactNode, useContext, useState } from 'react';
 import { useAuth } from './AuthContext';
 import { useOnboarding } from './OnboardingContext';
 
+export interface ChatSessionPreview {
+  sessionId: string;
+  backendSessionId?: string | null;
+  title: string;
+  updatedAt: string;
+  summary?: string;
+  messageCount: number;
+}
+
 interface ChatContextType {
   messages: ChatMessage[];
+  sessions: ChatSessionPreview[];
   isLoading: boolean;
+  isCreatingSession: boolean;
+  currentSessionId: string | null;
+  activeSessionId: string | null;
+  sessionSummary: string | null;
   sendMessage: (message: string) => Promise<void>;
+  createNewSession: () => Promise<void>;
+  loadSession: (sessionId: string) => Promise<void>;
   clearChat: () => void;
   isAIAvailable: boolean;
+}
+
+const CHAT_STORAGE_KEY = 'chat_sessions_v1';
+
+interface StoredChatSession extends ChatSessionPreview {
+  messages: ChatMessage[];
+}
+
+interface StoredChatPayload {
+  sessions: StoredChatSession[];
+  activeSessionId: string | null;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -73,49 +101,252 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   const { user } = useAuth();
   const { onboardingData } = useOnboarding();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [sessions, setSessions] = useState<ChatSessionPreview[]>([]);
+  const [sessionMessages, setSessionMessages] = useState<Record<string, ChatMessage[]>>({});
+  const [activeSessionKey, setActiveSessionKey] = useState<string | null>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCreatingSession, setIsCreatingSession] = useState(false);
   const [aiService, setAIService] = useState<AIService | null>(null);
   const [isAIAvailable, setIsAIAvailable] = useState(false);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [sessionSummary, setSessionSummary] = useState<string | null>(null);
+  const sessionsRef = React.useRef<ChatSessionPreview[]>([]);
+  const sessionMessagesRef = React.useRef<Record<string, ChatMessage[]>>({});
+
+  React.useEffect(() => {
+    sessionsRef.current = sessions;
+  }, [sessions]);
+
+  React.useEffect(() => {
+    sessionMessagesRef.current = sessionMessages;
+  }, [sessionMessages]);
+
+  const createLocalSessionId = React.useCallback(() => {
+    return `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  }, []);
+
+  const buildSessionTitle = React.useCallback((chatMessages: ChatMessage[]): string => {
+    const firstUserMessage = chatMessages.find((msg) => msg.role === 'user')?.content?.trim();
+    if (!firstUserMessage) {
+      return 'New Chat';
+    }
+    return firstUserMessage.length > 36 ? `${firstUserMessage.slice(0, 36)}...` : firstUserMessage;
+  }, []);
+
+  const persistSessions = React.useCallback(async (
+    nextSessions: ChatSessionPreview[],
+    nextSessionMessages: Record<string, ChatMessage[]>,
+    nextActiveSessionId: string | null
+  ) => {
+    try {
+      const payload: StoredChatPayload = {
+        sessions: nextSessions.map((session) => ({
+          ...session,
+          messages: nextSessionMessages[session.sessionId] || [],
+        })),
+        activeSessionId: nextActiveSessionId,
+      };
+      await AsyncStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(payload));
+    } catch (error) {
+      console.error('Failed to persist chat sessions:', error);
+    }
+  }, []);
+
+  const upsertSession = React.useCallback((
+    sessionKey: string,
+    nextMessages: ChatMessage[],
+    options?: {
+      backendSessionId?: string | null;
+      summary?: string | null;
+    }
+  ) => {
+    const now = new Date().toISOString();
+    const currentSessions = sessionsRef.current;
+    const currentSessionMessages = sessionMessagesRef.current;
+    const existingSession = currentSessions.find((session) => session.sessionId === sessionKey);
+    const nextSummary = options?.summary ?? existingSession?.summary ?? null;
+    const nextBackendSessionId = options?.backendSessionId ?? existingSession?.backendSessionId ?? null;
+
+    const nextSession: ChatSessionPreview = {
+      sessionId: sessionKey,
+      backendSessionId: nextBackendSessionId,
+      title: buildSessionTitle(nextMessages),
+      updatedAt: now,
+      summary: nextSummary || undefined,
+      messageCount: nextMessages.filter((message) => message.role !== 'system').length,
+    };
+
+    const nextSessions = [
+      nextSession,
+      ...currentSessions.filter((session) => session.sessionId !== sessionKey),
+    ];
+    const nextSessionMessages = {
+      ...currentSessionMessages,
+      [sessionKey]: nextMessages,
+    };
+
+    sessionsRef.current = nextSessions;
+    sessionMessagesRef.current = nextSessionMessages;
+    setSessions(nextSessions);
+    setSessionMessages(nextSessionMessages);
+    setActiveSessionKey(sessionKey);
+    setMessages(nextMessages);
+    setCurrentSessionId(nextBackendSessionId);
+    setSessionSummary(nextSummary || null);
+    void persistSessions(nextSessions, nextSessionMessages, sessionKey);
+  }, [buildSessionTitle, persistSessions]);
 
   // Initialize AI service
   React.useEffect(() => {
-    if (validateConfig() && Config.AI_API_KEY) {
-      try {
-        const service = new AIService(Config.AI_API_KEY);
-        setAIService(service);
-        setIsAIAvailable(true);
-      } catch (error) {
-        console.error('Failed to initialize AI service:', error);
-        setIsAIAvailable(false);
-      }
-    } else {
+    try {
+      const service = new AIService();
+      setAIService(service);
+      setIsAIAvailable(true);
+    } catch (error) {
+      console.error('Failed to initialize AI service:', error);
       setIsAIAvailable(false);
     }
   }, []);
 
+  React.useEffect(() => {
+    const hydrateChatSessions = async () => {
+      try {
+        const rawValue = await AsyncStorage.getItem(CHAT_STORAGE_KEY);
+        if (!rawValue) {
+          const initialSessionId = createLocalSessionId();
+          const initialSession: ChatSessionPreview = {
+            sessionId: initialSessionId,
+            backendSessionId: null,
+            title: 'New Chat',
+            updatedAt: new Date().toISOString(),
+            messageCount: 0,
+          };
+          const initialSessions = [initialSession];
+          const initialSessionMessages = { [initialSessionId]: [] as ChatMessage[] };
+          setSessions(initialSessions);
+          setSessionMessages(initialSessionMessages);
+          setActiveSessionKey(initialSessionId);
+          setMessages([]);
+          setCurrentSessionId(null);
+          setSessionSummary(null);
+          void persistSessions(initialSessions, initialSessionMessages, initialSessionId);
+          return;
+        }
+
+        const parsedPayload = JSON.parse(rawValue) as StoredChatPayload;
+        const parsedSessions = Array.isArray(parsedPayload?.sessions) ? parsedPayload.sessions : [];
+
+        if (parsedSessions.length === 0) {
+          const fallbackSessionId = createLocalSessionId();
+          const fallbackSession: ChatSessionPreview = {
+            sessionId: fallbackSessionId,
+            backendSessionId: null,
+            title: 'New Chat',
+            updatedAt: new Date().toISOString(),
+            messageCount: 0,
+          };
+          const fallbackSessions = [fallbackSession];
+          const fallbackSessionMessages = { [fallbackSessionId]: [] as ChatMessage[] };
+          setSessions(fallbackSessions);
+          setSessionMessages(fallbackSessionMessages);
+          setActiveSessionKey(fallbackSessionId);
+          setMessages([]);
+          setCurrentSessionId(null);
+          setSessionSummary(null);
+          void persistSessions(fallbackSessions, fallbackSessionMessages, fallbackSessionId);
+          return;
+        }
+
+        const restoredSessions = parsedSessions
+          .map((session) => ({
+            sessionId: session.sessionId,
+            backendSessionId: session.backendSessionId ?? null,
+            title: session.title || 'New Chat',
+            updatedAt: session.updatedAt || new Date().toISOString(),
+            summary: session.summary,
+            messageCount: session.messageCount ?? (Array.isArray(session.messages) ? session.messages.length : 0),
+          }))
+          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+
+        const restoredSessionMessages: Record<string, ChatMessage[]> = {};
+        parsedSessions.forEach((session) => {
+          restoredSessionMessages[session.sessionId] = Array.isArray(session.messages) ? session.messages : [];
+        });
+
+        const preferredActiveId =
+          parsedPayload.activeSessionId &&
+          restoredSessions.some((session) => session.sessionId === parsedPayload.activeSessionId)
+            ? parsedPayload.activeSessionId
+            : restoredSessions[0].sessionId;
+
+        const activeSession = restoredSessions.find((session) => session.sessionId === preferredActiveId) || restoredSessions[0];
+
+        setSessions(restoredSessions);
+        setSessionMessages(restoredSessionMessages);
+        setActiveSessionKey(preferredActiveId);
+        setMessages(restoredSessionMessages[preferredActiveId] || []);
+        setCurrentSessionId(activeSession.backendSessionId || null);
+        setSessionSummary(activeSession.summary || null);
+      } catch (error) {
+        console.error('Failed to hydrate chat sessions:', error);
+      } finally {
+        setIsHydrated(true);
+      }
+    };
+
+    void hydrateChatSessions();
+  }, [createLocalSessionId, persistSessions]);
+
+  React.useEffect(() => {
+    if (!activeSessionKey) return;
+    const activeSession = sessions.find((session) => session.sessionId === activeSessionKey);
+    setMessages(sessionMessages[activeSessionKey] || []);
+    setCurrentSessionId(activeSession?.backendSessionId || null);
+    setSessionSummary(activeSession?.summary || null);
+  }, [activeSessionKey, sessionMessages, sessions]);
+
   // Generate personalized welcome message when profile data is available
   React.useEffect(() => {
+    if (!isHydrated || !activeSessionKey) return;
+
     const profileData = normalizeProfileData(user?.profile || onboardingData);
-    
+
     if (profileData && messages.length === 0) {
       const { idol, personality, goals, challenges, supportNeeds } = profileData;
-      
-      let welcomeMessage = generateIdolWelcomeMessage(idol, personality, goals, challenges, supportNeeds);
-      
-      setMessages([{
+      const welcomeMessage = generateIdolWelcomeMessage(idol, personality, goals, challenges, supportNeeds);
+      const welcomePayload: ChatMessage[] = [{
         role: 'assistant',
         content: welcomeMessage,
-      }]);
-      
-      console.log('👋 Generated personalized welcome message in idol style:', welcomeMessage);
+      }];
+      setMessages(welcomePayload);
+      upsertSession(activeSessionKey, welcomePayload, {
+        backendSessionId: currentSessionId,
+        summary: sessionSummary,
+      });
+
+      console.log('Generated personalized welcome message in idol style:', welcomeMessage);
     } else if (!profileData && messages.length === 0) {
-      // Fallback welcome message
-      setMessages([{
+      const fallbackPayload: ChatMessage[] = [{
         role: 'assistant',
         content: `Hello! I'm LMN8, your AI companion, ready to help you on your journey. How can I support you today?`,
-      }]);
+      }];
+      setMessages(fallbackPayload);
+      upsertSession(activeSessionKey, fallbackPayload, {
+        backendSessionId: currentSessionId,
+        summary: sessionSummary,
+      });
     }
-  }, [user?.profile, onboardingData, messages.length]);
+  }, [
+    activeSessionKey,
+    currentSessionId,
+    isHydrated,
+    messages.length,
+    onboardingData,
+    sessionSummary,
+    upsertSession,
+    user?.profile,
+  ]);
 
   const generateIdolWelcomeMessage = (idol: string, personality: string, goals: string, challenges: string, supportNeeds: string): string => {
     const idolLower = idol.toLowerCase();
@@ -182,125 +413,75 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     return responses[Math.floor(Math.random() * responses.length)];
   };
 
-  const generateSystemPrompt = (): string => {
-    // Prioritize user profile data from backend, fallback to onboarding data
-    const profileData = normalizeProfileData(user?.profile || onboardingData);
-    
-    if (!profileData) {
-      return `You are a supportive AI companion for a therapeutic app called LMN8. Be empathetic, encouraging, and helpful. Keep responses concise but meaningful.`;
-    }
+  const sendMessage = async (message: string) => {
+    const trimmedMessage = message.trim();
+    if (!trimmedMessage) return;
 
-    const { idol, personality, goals, challenges, communicationStyle, interests, values, supportNeeds } = profileData;
-    
-    console.log('🤖 Generating personalized AI prompt with profile data:', {
-      source: user?.profile ? 'backend' : 'onboarding',
-      profile: profileData
-    });
-    
-    return `You are LMN8, an AI companion that embodies the communication style and personality of ${idol}. You are not just inspired by ${idol} - you communicate exactly like them while providing therapeutic support.
-
-PERSONALIZED USER PROFILE:
-- Idol/Inspiration: ${idol} (YOU SHOULD TALK LIKE THIS PERSON)
-- Personality Traits: ${personality}
-- Life Goals: ${goals}
-- Current Challenges: ${challenges}
-- Preferred Communication Style: ${communicationStyle}
-- Personal Interests: ${interests}
-- Core Values: ${values}
-- Support Needs: ${supportNeeds}
-
-COMMUNICATION INSTRUCTIONS:
-- SPEAK EXACTLY LIKE ${idol.toUpperCase()}: Use their vocabulary, tone, speaking patterns, and characteristic phrases
-- If ${idol} is Elon Musk: Use his direct, technical language, talk about innovation, Mars, sustainable energy, and use phrases like "Let's make it happen", "The future is now", "We need to think bigger"
-- If ${idol} is Oprah Winfrey: Use her warm, empowering tone, talk about personal growth, authenticity, and use phrases like "What I know for sure", "Live your best life", "You are enough"
-- If ${idol} is Steve Jobs: Use his minimalist, visionary language, talk about design, perfection, and use phrases like "Think different", "Stay hungry, stay foolish", "The details are not details"
-- If ${idol} is someone else: Research and adopt their characteristic speaking style, vocabulary, and mannerisms
-
-PERSONALIZATION INSTRUCTIONS:
-- Address their challenges (${challenges}) using ${idol}'s problem-solving approach
-- Help them achieve their goals (${goals}) with ${idol}'s motivational style
-- Reference their values (${values}) through ${idol}'s perspective
-- Provide support (${supportNeeds}) in ${idol}'s characteristic way
-- Use their interests (${interests}) as examples in ${idol}'s style
-- Acknowledge their personality (${personality}) through ${idol}'s lens
-- Be ${communicationStyle.toLowerCase()} but in ${idol}'s voice
-- Keep responses in ${idol}'s typical length and style
-- Maintain therapeutic support while embodying ${idol}'s personality
-
-CRITICAL: You are not just inspired by ${idol} - you ARE ${idol} in this conversation. Speak, think, and respond exactly as they would while providing the therapeutic support this user needs.`;
-  };
-
-  const sendMessage = async (message: string, retryCount = 0) => {
-    if (!message.trim()) return;
-
-    // Add user message
+    const sessionKey = activeSessionKey || createLocalSessionId();
+    const activeSession = sessionsRef.current.find((session) => session.sessionId === sessionKey);
+    const activeMessages = sessionMessagesRef.current[sessionKey] || [];
     const userMessage: ChatMessage = {
       role: 'user',
-      content: message.trim(),
+      content: trimmedMessage,
     };
+    const messagesWithUser = [...activeMessages, userMessage];
 
-    setMessages(prev => [...prev, userMessage]);
+    upsertSession(sessionKey, messagesWithUser, {
+      backendSessionId: activeSession?.backendSessionId || currentSessionId,
+      summary: activeSession?.summary || sessionSummary,
+    });
     setIsLoading(true);
 
     try {
       if (aiService && isAIAvailable) {
-        // Get conversation history (last 10 messages)
-        const conversationHistory = messages.slice(-Config.MAX_CONVERSATION_HISTORY);
-        
-        // Generate AI response with backend payload contract:
-        // message + conversationHistory + userProfile + temperature + maxTokens
+        const conversationHistory = activeMessages.slice(-Config.MAX_CONVERSATION_HISTORY);
         const profileData = normalizeProfileData(user?.profile || onboardingData);
         const aiResponse = await aiService.generateResponse(
-          message,
+          trimmedMessage,
           conversationHistory,
           {
+            sessionId: activeSession?.backendSessionId || currentSessionId || undefined,
             userProfile: profileData || undefined,
             temperature: Config.DEFAULT_TEMPERATURE,
             maxTokens: Config.DEFAULT_MAX_TOKENS,
           }
         );
 
-        // Add AI response
         const assistantMessage: ChatMessage = {
           role: 'assistant',
-          content: aiResponse,
+          content: aiResponse.content,
         };
 
-        setMessages(prev => [...prev, assistantMessage]);
+        upsertSession(sessionKey, [...messagesWithUser, assistantMessage], {
+          backendSessionId: aiResponse.sessionId || activeSession?.backendSessionId || currentSessionId,
+          summary: typeof aiResponse.sessionSummary === 'string'
+            ? aiResponse.sessionSummary
+            : activeSession?.summary || sessionSummary,
+        });
       } else {
-        // Fallback response when AI is not available
         const profileData = normalizeProfileData(user?.profile || onboardingData);
         let fallbackResponse = "I understand how you're feeling. Let's work through this together.";
-        
+
         if (profileData) {
           const { idol, personality, goals, challenges, supportNeeds } = profileData;
-          
           fallbackResponse = generateIdolFallbackResponse(idol, personality, goals, challenges, supportNeeds);
         }
-        
+
         const assistantMessage: ChatMessage = {
           role: 'assistant',
           content: fallbackResponse,
         };
 
-        setMessages(prev => [...prev, assistantMessage]);
+        upsertSession(sessionKey, [...messagesWithUser, assistantMessage], {
+          backendSessionId: activeSession?.backendSessionId || currentSessionId,
+          summary: activeSession?.summary || sessionSummary,
+        });
       }
     } catch (error) {
       console.error('Error sending message:', error);
-      
-      // Retry logic for timeout errors
-      if (retryCount < 2 && error instanceof Error && 
-          (error.message.includes('timeout') || error.message.includes('AbortError'))) {
-        console.log(`🔄 Retrying AI request (attempt ${retryCount + 1}/2)...`);
-        setTimeout(() => {
-          sendMessage(message, retryCount + 1);
-        }, 2000); // Wait 2 seconds before retry
-        return;
-      }
-      
-      // Provide more helpful error message based on error type
+
       let errorMessage = "I'm sorry, I'm having trouble responding right now. Please try again in a moment.";
-      
+
       if (error instanceof Error) {
         if (error.message.includes('timeout') || error.message.includes('AbortError')) {
           errorMessage = "I'm taking a bit longer to respond than usual. This might be due to network issues. Please try again, and I'll do my best to respond quickly.";
@@ -308,27 +489,91 @@ CRITICAL: You are not just inspired by ${idol} - you ARE ${idol} in this convers
           errorMessage = "I'm experiencing some technical difficulties right now. Let me try a different approach - what specific support do you need today?";
         }
       }
-      
+
       const assistantMessage: ChatMessage = {
         role: 'assistant',
         content: errorMessage,
       };
 
-      setMessages(prev => [...prev, assistantMessage]);
+      upsertSession(sessionKey, [...messagesWithUser, assistantMessage], {
+        backendSessionId: activeSession?.backendSessionId || currentSessionId,
+        summary: activeSession?.summary || sessionSummary,
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
   const clearChat = () => {
-    // Clear messages and let the useEffect regenerate the personalized welcome message
-    setMessages([]);
+    if (!activeSessionKey) return;
+    upsertSession(activeSessionKey, [], {
+      backendSessionId: null,
+      summary: null,
+    });
   };
 
+  const createNewSession = async () => {
+    setIsCreatingSession(true);
+    try {
+      let backendSessionId: string | null = null;
+      if (user?.token && aiService && isAIAvailable) {
+        backendSessionId = await aiService.createSession();
+      }
+
+      const newSessionKey = backendSessionId || createLocalSessionId();
+      const now = new Date().toISOString();
+      const nextSession: ChatSessionPreview = {
+        sessionId: newSessionKey,
+        backendSessionId,
+        title: 'New Chat',
+        updatedAt: now,
+        messageCount: 0,
+      };
+      const nextSessions = [
+        nextSession,
+        ...sessionsRef.current.filter((session) => session.sessionId !== newSessionKey),
+      ];
+      const nextSessionMessages = {
+        ...sessionMessagesRef.current,
+        [newSessionKey]: [],
+      };
+
+      sessionsRef.current = nextSessions;
+      sessionMessagesRef.current = nextSessionMessages;
+      setSessions(nextSessions);
+      setSessionMessages(nextSessionMessages);
+      setActiveSessionKey(newSessionKey);
+      setCurrentSessionId(backendSessionId);
+      setSessionSummary(null);
+      setMessages([]);
+      void persistSessions(nextSessions, nextSessionMessages, newSessionKey);
+    } finally {
+      setIsCreatingSession(false);
+    }
+  };
+
+  const loadSession = async (sessionId: string) => {
+    const selectedSession = sessionsRef.current.find((session) => session.sessionId === sessionId);
+    if (!selectedSession) return;
+
+    const nextMessages = sessionMessagesRef.current[sessionId] || [];
+    setActiveSessionKey(sessionId);
+    setMessages(nextMessages);
+    setCurrentSessionId(selectedSession.backendSessionId || null);
+    setSessionSummary(selectedSession.summary || null);
+    void persistSessions(sessionsRef.current, sessionMessagesRef.current, sessionId);
+  };
   const value: ChatContextType = {
     messages,
+    sessions,
     isLoading,
+    isCreatingSession,
+    currentSessionId,
+    activeSessionId: activeSessionKey,
+    sessionSummary,
     sendMessage,
+    createNewSession,
+    loadSession,
     clearChat,
     isAIAvailable,
   };
@@ -339,3 +584,6 @@ CRITICAL: You are not just inspired by ${idol} - you ARE ${idol} in this convers
     </ChatContext.Provider>
   );
 };
+
+
+

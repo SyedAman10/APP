@@ -1,5 +1,5 @@
 import { Config } from '@/constants/Config';
-import { aiAPI } from '@/services/APIService';
+import { api } from '@/services/APIService';
 
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -46,6 +46,7 @@ export interface AIUserProfile {
 
 interface BackendAIMessageRequest {
   message: string;
+  sessionId?: string;
   conversationHistory: {
     role: 'user' | 'assistant';
     content: string;
@@ -60,8 +61,19 @@ interface BackendAIMessageResponse {
   message?: string;
   response?: string;
   data?: {
+    sessionId?: string;
+    sessionSummary?: string;
     message?: string;
     response?: string;
+    role?: string;
+    finishReason?: string;
+    usage?: {
+      prompt_tokens?: number;
+      completion_tokens?: number;
+      total_tokens?: number;
+    };
+    model?: string;
+    timestamp?: string;
     choices?: {
       message?: {
         content?: string;
@@ -75,24 +87,43 @@ interface BackendAIMessageResponse {
   }[];
 }
 
+interface BackendCreateSessionResponse {
+  success?: boolean;
+  data?: {
+    id?: string;
+    sessionId?: string;
+  };
+  sessionId?: string;
+  id?: string;
+}
+
+export interface AIResponsePayload {
+  content: string;
+  sessionId?: string;
+  sessionSummary?: string;
+  model?: string;
+  timestamp?: string;
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+  };
+}
+
 export class AIService {
-  private apiKey: string;
-
-  constructor(apiKey: string) {
-    this.apiKey = apiKey;
-  }
-
   async chatCompletion(
     message: string,
     conversationHistory: ChatMessage[] = [],
     options?: {
+      sessionId?: string;
       userProfile?: AIUserProfile;
       temperature?: number;
       maxTokens?: number;
     }
-  ): Promise<ChatCompletionResponse> {
+  ): Promise<AIResponsePayload> {
     const requestBody: BackendAIMessageRequest = {
       message,
+      sessionId: options?.sessionId,
       conversationHistory: conversationHistory
         .filter((msg) => msg.role === 'user' || msg.role === 'assistant')
         .map((msg) => ({ role: msg.role as 'user' | 'assistant', content: msg.content })),
@@ -103,7 +134,7 @@ export class AIService {
 
     try {
       console.log('🤖 Sending AI request with timeout:', 45000);
-      const response = await aiAPI.post<BackendAIMessageResponse>('/api/backend/ai/message', requestBody, {
+      const response = await api.post<BackendAIMessageResponse>('/api/backend/ai/message', requestBody, {
         'User-Agent': 'LMN8-App/1.0.0',
       });
 
@@ -131,25 +162,12 @@ export class AIService {
       }
 
       return {
-        id: response.data?.data?.choices?.[0]?.message?.content ? 'backend-openai-style' : 'backend-message',
-        object: 'chat.completion',
-        created: Math.floor(Date.now() / 1000),
-        model: Config.AI_MODEL,
-        choices: [
-          {
-            index: 0,
-            message: {
-              role: 'assistant',
-              content,
-            },
-            finish_reason: 'stop',
-          },
-        ],
-        usage: {
-          prompt_tokens: 0,
-          completion_tokens: 0,
-          total_tokens: 0,
-        },
+        content,
+        sessionId: response.data?.data?.sessionId,
+        sessionSummary: response.data?.data?.sessionSummary,
+        model: response.data?.data?.model || Config.AI_MODEL,
+        timestamp: response.data?.data?.timestamp,
+        usage: response.data?.data?.usage,
       };
     } catch (error) {
       console.error('AI API Error:', error);
@@ -164,22 +182,30 @@ export class AIService {
     userMessage: string,
     conversationHistory: ChatMessage[] = [],
     options?: {
+      sessionId?: string;
       userProfile?: AIUserProfile;
       temperature?: number;
       maxTokens?: number;
     }
-  ): Promise<string> {
+  ): Promise<AIResponsePayload> {
     try {
-      const response = await this.chatCompletion(userMessage, conversationHistory, options);
-      
-      if (response.choices && response.choices.length > 0) {
-        return response.choices[0].message.content;
-      } else {
-        throw new Error('No response generated');
-      }
+      return await this.chatCompletion(userMessage, conversationHistory, options);
     } catch (error) {
       console.error('Generate response error:', error);
       throw error;
+    }
+  }
+
+  async createSession(): Promise<string | null> {
+    try {
+      const response = await api.post<BackendCreateSessionResponse>('/api/backend/ai/sessions', {});
+      if (!response.success) {
+        return null;
+      }
+      return response.data?.data?.sessionId || response.data?.data?.id || response.data?.sessionId || response.data?.id || null;
+    } catch (error) {
+      console.error('Create session error:', error);
+      return null;
     }
   }
 }
@@ -187,8 +213,8 @@ export class AIService {
 // Create a singleton instance
 let aiServiceInstance: AIService | null = null;
 
-export const initializeAIService = (apiKey: string) => {
-  aiServiceInstance = new AIService(apiKey);
+export const initializeAIService = (_apiKey?: string) => {
+  aiServiceInstance = new AIService();
   return aiServiceInstance;
 };
 

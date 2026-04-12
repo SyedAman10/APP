@@ -24,6 +24,13 @@ export default function MainLayout() {
           title: 'Entry Details'
         }} 
       />
+      <Stack.Screen
+        name="clinician-summaries"
+        options={{
+          headerShown: false,
+          title: 'Clinician Summaries'
+        }}
+      />
     </Stack>
   );
 }
