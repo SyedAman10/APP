@@ -3,7 +3,6 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
 
 import { LMN8SplashScreen } from '@/components/ui/LMN8SplashScreen';
 import { AuthProvider } from '@/contexts/AuthContext';
