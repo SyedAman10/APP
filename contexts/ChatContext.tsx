@@ -1,4 +1,3 @@
-import { Config } from '@/constants/Config';
 import { AIService, ChatMessage } from '@/services/AIService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, ReactNode, useContext, useState } from 'react';
@@ -306,15 +305,17 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     setSessionSummary(activeSession?.summary || null);
   }, [activeSessionKey, sessionMessages, sessions]);
 
-  // Generate personalized welcome message when profile data is available
+  // Generate welcome message
   React.useEffect(() => {
     if (!isHydrated || !activeSessionKey) return;
 
     const profileData = normalizeProfileData(user?.profile || onboardingData);
 
     if (profileData && messages.length === 0) {
-      const { idol, personality, goals, challenges, supportNeeds } = profileData;
-      const welcomeMessage = generateIdolWelcomeMessage(idol, personality, goals, challenges, supportNeeds);
+      const { idol } = profileData;
+      const welcomeMessage = idol
+        ? `Hello! I'm LMN8, inspired by ${idol}. I'm here to support and guide you on your journey. How can I be with you today?`
+        : `Hello! I'm LMN8, your AI companion, ready to help you on your journey. How can I support you today?`;
       const welcomePayload: ChatMessage[] = [{
         role: 'assistant',
         content: welcomeMessage,
@@ -325,7 +326,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         summary: sessionSummary,
       });
 
-      console.log('Generated personalized welcome message in idol style:', welcomeMessage);
+      console.log('Generated welcome message:', welcomeMessage);
     } else if (!profileData && messages.length === 0) {
       const fallbackPayload: ChatMessage[] = [{
         role: 'assistant',
@@ -348,70 +349,14 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     user?.profile,
   ]);
 
-  const generateIdolWelcomeMessage = (idol: string, personality: string, goals: string, challenges: string, supportNeeds: string): string => {
-    const idolLower = idol.toLowerCase();
-    
-    if (idolLower.includes('elon') || idolLower.includes('musk')) {
-      return `Hey! I'm LMN8, and I'm here to help you build the future. I know you're dealing with ${challenges.toLowerCase()}, but that's exactly the kind of problem we solve at Tesla and SpaceX. Your goals of ${goals.toLowerCase()}? Let's make it happen. We need to think bigger, work harder, and never settle for mediocrity. What's the biggest challenge we're tackling today?`;
-    }
-    
-    if (idolLower.includes('oprah') || idolLower.includes('winfrey')) {
-      return `Hello beautiful soul! I'm LMN8, and I'm here to help you live your best life. I can see you're ${personality.toLowerCase()}, and that's exactly what the world needs more of. Your goals of ${goals.toLowerCase()}? What I know for sure is that you have everything you need inside you right now. You are enough, and together we're going to make sure you believe that. What's on your heart today?`;
-    }
-    
-    if (idolLower.includes('steve') || idolLower.includes('jobs')) {
-      return `Hello. I'm LMN8. I'm here to help you think different. I see you're working on ${goals.toLowerCase()}, and I know the challenges of ${challenges.toLowerCase()} can feel overwhelming. But here's the thing - the details are not details. They make the design. We're going to stay hungry, stay foolish, and create something extraordinary. What are we building today?`;
-    }
-    
-    if (idolLower.includes('warren') || idolLower.includes('buffett')) {
-      return `Good morning! I'm LMN8, and I'm here to help you invest in yourself. I know you're dealing with ${challenges.toLowerCase()}, but remember - it's far better to buy a wonderful company at a fair price than a fair company at a wonderful price. Your goals of ${goals.toLowerCase()}? That's exactly the kind of long-term thinking that builds wealth. What's our next move?`;
-    }
-    
-    if (idolLower.includes('tony') || idolLower.includes('robbins')) {
-      return `What's up, champion! I'm LMN8, and I'm here to help you take massive action! I can see you're ${personality.toLowerCase()}, and that's powerful! Your goals of ${goals.toLowerCase()}? That's exactly what we're going to achieve! The quality of your life is the quality of your questions. So what's the question that's going to change everything for you today?`;
-    }
-    
-    // Default personalized message for other idols
-    return `Hello! I'm LMN8, inspired by ${idol}. I know you're ${personality.toLowerCase()} and working towards ${goals.toLowerCase()}. I'm here to help you tackle ${challenges.toLowerCase()} and provide the ${supportNeeds.toLowerCase()} you need. Let's make this journey amazing together!`;
-  };
-
-  const generateIdolFallbackResponse = (idol: string, personality: string, goals: string, challenges: string, supportNeeds: string): string => {
-    const idolLower = idol.toLowerCase();
-    const responses = [];
-    
-    if (idolLower.includes('elon') || idolLower.includes('musk')) {
-      responses.push(
-        `I understand the challenge. At Tesla, we face impossible problems every day. Your ${challenges.toLowerCase()}? That's just another engineering problem to solve. Let's break it down and build a solution.`,
-        `That's a great insight! I know you're working on ${goals.toLowerCase()}, and that's exactly the kind of vision we need. The future is now - what's our next move?`,
-        `I can see this is important to you. Given your goals of ${goals.toLowerCase()}, we need to think bigger. What specific problem are we solving today?`,
-        `Thank you for sharing that. I'm here to help you tackle ${challenges.toLowerCase()} with the same approach we use at SpaceX. Let's make it happen.`
-      );
-    } else if (idolLower.includes('oprah') || idolLower.includes('winfrey')) {
-      responses.push(
-        `I understand how you're feeling. What I know for sure is that you have everything you need inside you right now. Your ${personality.toLowerCase()} nature is your superpower. Let's work through this together.`,
-        `That's a beautiful insight! I can see you're working on ${goals.toLowerCase()}, and that's exactly what living your best life looks like. What's on your heart today?`,
-        `I can feel this is important to you. Your goals of ${goals.toLowerCase()}? You are enough, and together we're going to make sure you believe that.`,
-        `Thank you for trusting me with this. I'm here to help you live your best life, and that means tackling ${challenges.toLowerCase()} with grace and authenticity.`
-      );
-    } else if (idolLower.includes('steve') || idolLower.includes('jobs')) {
-      responses.push(
-        `I understand the challenge. The details are not details - they make the design. Your ${challenges.toLowerCase()}? That's just another problem to solve with elegance and simplicity.`,
-        `That's a great insight! I see you're working on ${goals.toLowerCase()}, and that's exactly the kind of vision that changes the world. What are we building today?`,
-        `I can see this is important to you. Given your goals of ${goals.toLowerCase()}, we need to think different. Stay hungry, stay foolish.`,
-        `Thank you for sharing that. I'm here to help you create something extraordinary. Your ${personality.toLowerCase()} nature is exactly what we need.`
-      );
-    } else {
-      // Default responses for other idols
-      responses.push(
-        `I understand how you're feeling. Based on your profile, I know you're ${personality.toLowerCase()} and value ${goals.toLowerCase()}. Let's work through this together.`,
-        `That's a great insight! I remember from your profile that you're working on ${challenges.toLowerCase()}. Would you like to explore some strategies that might help?`,
-        `I can see this is important to you. Given your goals of ${goals.toLowerCase()} and your need for ${supportNeeds.toLowerCase()}, here's what I suggest...`,
-        `Thank you for sharing that with me. I'm here to support you through this, inspired by ${idol}. Let's find a solution together.`
-      );
-    }
-    
-    return responses[Math.floor(Math.random() * responses.length)];
-  };
+  // ====== PERSONA AGENT — handled by backend /api/chat ======
+  // The backend persona agent in lmn8-backend/app/agents/persona_agent.py:
+  //   1. Fetches celebrity profiles from DB
+  //   2. Fetches fresh tweets  
+  //   3. Generates reply using HuggingFace LLM
+  //   4. Saves messages
+  // It uses onboarding data (the 14 questions) to determine persona + build user context.
+  // ============================================================
 
   const sendMessage = async (message: string) => {
     const trimmedMessage = message.trim();
@@ -433,43 +378,42 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     setIsLoading(true);
 
     try {
+      // Build onboarding data for the persona agent from available context
+      const profileData = normalizeProfileData(user?.profile || onboardingData);
+      const onboardingPayload: Record<string, string> = {};
+      if (profileData) {
+        onboardingPayload.inspirationFigure = profileData.idol;
+        onboardingPayload.inspirationQuality = profileData.personality;
+        onboardingPayload.actorAuthorStyle = profileData.communicationStyle;
+        onboardingPayload.spiritualPractices = profileData.values;
+        onboardingPayload.primaryHope = profileData.goals;
+        onboardingPayload.copingPattern = profileData.supportNeeds;
+        onboardingPayload.lifeLandscape = profileData.challenges;
+      }
+
+      // Use session ID — prefer backend session, fall back to local ID
+      const chatSessionId = activeSession?.backendSessionId || sessionKey;
+
       if (aiService && isAIAvailable) {
-        const conversationHistory = activeMessages.slice(-Config.MAX_CONVERSATION_HISTORY);
-        const profileData = normalizeProfileData(user?.profile || onboardingData);
-        const aiResponse = await aiService.generateResponse(
+        const personaResult = await aiService.personaChat(
+          chatSessionId,
           trimmedMessage,
-          conversationHistory,
-          {
-            sessionId: activeSession?.backendSessionId || currentSessionId || undefined,
-            userProfile: profileData || undefined,
-            temperature: Config.DEFAULT_TEMPERATURE,
-            maxTokens: Config.DEFAULT_MAX_TOKENS,
-          }
+          onboardingPayload,
         );
 
         const assistantMessage: ChatMessage = {
           role: 'assistant',
-          content: aiResponse.content,
+          content: personaResult.response,
         };
 
         upsertSession(sessionKey, [...messagesWithUser, assistantMessage], {
-          backendSessionId: aiResponse.sessionId || activeSession?.backendSessionId || currentSessionId,
-          summary: typeof aiResponse.sessionSummary === 'string'
-            ? aiResponse.sessionSummary
-            : activeSession?.summary || sessionSummary,
+          backendSessionId: personaResult.sessionId || activeSession?.backendSessionId || currentSessionId,
+          summary: activeSession?.summary || sessionSummary,
         });
       } else {
-        const profileData = normalizeProfileData(user?.profile || onboardingData);
-        let fallbackResponse = "I understand how you're feeling. Let's work through this together.";
-
-        if (profileData) {
-          const { idol, personality, goals, challenges, supportNeeds } = profileData;
-          fallbackResponse = generateIdolFallbackResponse(idol, personality, goals, challenges, supportNeeds);
-        }
-
         const assistantMessage: ChatMessage = {
           role: 'assistant',
-          content: fallbackResponse,
+          content: "I'm LMN8, your AI companion. I'm here to support you, but I need to connect to the server first. Please try again in a moment.",
         };
 
         upsertSession(sessionKey, [...messagesWithUser, assistantMessage], {
@@ -478,13 +422,11 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         });
       }
     } catch (error) {
-      console.error('Error sending message:', error);
-
       let errorMessage = "I'm sorry, I'm having trouble responding right now. Please try again in a moment.";
 
       if (error instanceof Error) {
         if (error.message.includes('timeout') || error.message.includes('AbortError')) {
-          errorMessage = "I'm taking a bit longer to respond than usual. This might be due to network issues. Please try again, and I'll do my best to respond quickly.";
+          errorMessage = "I'm taking a bit longer to respond than usual. This might be due to network issues. Please try again.";
         } else if (error.message.includes('Failed to get AI response')) {
           errorMessage = "I'm experiencing some technical difficulties right now. Let me try a different approach - what specific support do you need today?";
         }

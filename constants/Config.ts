@@ -15,6 +15,9 @@ export const Config = {
     process.env.EXPO_PUBLIC_BACKEND_URL ||
     process.env.EXPO_PUBLIC_API_BASE_URL ||
     'https://5b54a16a5c98.ngrok-free.app',
+
+  // Persona Agent API (separate local lmn8-backend)
+  PERSONA_API_URL: process.env.EXPO_PUBLIC_PERSONA_API_URL || 'http://192.168.18.9:8000',
   
   // Chat Configuration
   MAX_CONVERSATION_HISTORY: 4,

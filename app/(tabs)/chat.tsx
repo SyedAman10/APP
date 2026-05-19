@@ -42,21 +42,9 @@ export default function ChatScreen() {
 
     const message = inputText.trim();
     setInputText('');
-    
-    // Scroll to bottom when sending message
-    setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 100);
 
     await sendMessage(message);
   };
-
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-  }, [messages]);
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString('en-US', { 
@@ -131,7 +119,6 @@ export default function ChatScreen() {
         <View style={styles.sessionInfoContainer}>
           {currentSessionId ? (
             <>
-              <Text style={styles.sessionInfoTitle}>Chat #{currentSessionId}</Text>
               {sessionSummary ? (
                 <Text style={styles.sessionInfoSummary} numberOfLines={1}>
                   {sessionSummary}
@@ -198,8 +185,8 @@ export default function ChatScreen() {
 
       <KeyboardAvoidingView
         style={styles.chatBody}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={0}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
         {/* Messages */}
         <ScrollView

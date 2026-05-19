@@ -1,5 +1,8 @@
 import { Config } from '@/constants/Config';
-import { api } from '@/services/APIService';
+import { api, APIService } from '@/services/APIService';
+
+// Dedicated backend client for persona agent calls
+const personaClient = new APIService(Config.PERSONA_API_URL);
 
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -206,6 +209,36 @@ export class AIService {
     } catch (error) {
       console.error('Create session error:', error);
       return null;
+    }
+  }
+
+  async personaChat(
+    sessionId: string,
+    message: string,
+    onboardingData?: Record<string, any>
+  ): Promise<{ response: string; sessionId: string; personas: string[] }> {
+    try {
+      console.log('Sending persona chat request...');
+      const response = await personaClient.post<{ response: string; session_id: string; personas: string[] }>(
+        '/api/chat',
+        {
+          session_id: sessionId,
+          message,
+          onboarding_data: onboardingData || {},
+        }
+      );
+
+      if (!response.success || !response.data) {
+        throw new Error(response.error || 'Failed to get persona response');
+      }
+
+      return {
+        response: response.data.response,
+        sessionId: response.data.session_id,
+        personas: response.data.personas || [],
+      };
+    } catch (error) {
+      throw error;
     }
   }
 }

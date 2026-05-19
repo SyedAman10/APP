@@ -102,8 +102,6 @@ export class APIService {
         data: responseData,
       };
     } catch (error: any) {
-      console.error('API Request Error:', error);
-      
       if (error.name === 'AbortError') {
         return {
           success: false,
