@@ -241,6 +241,41 @@ export class AIService {
       throw error;
     }
   }
+
+  async therapyChat(
+    sessionId: string,
+    message: string,
+    options?: {
+      onboardingData?: Record<string, any>;
+      userContext?: Record<string, any>;
+    }
+  ): Promise<{ response: string; sessionId: string; personas: string[]; sources: string[] }> {
+    try {
+      console.log('Sending therapy chat request...');
+      const response = await personaClient.post<{ response: string; session_id: string; personas: string[]; sources: string[] }>(
+        '/api/therapy-chat',
+        {
+          session_id: sessionId,
+          message,
+          onboarding_data: options?.onboardingData || {},
+          user_context: options?.userContext || {},
+        }
+      );
+
+      if (!response.success || !response.data) {
+        throw new Error(response.error || 'Failed to get therapy response');
+      }
+
+      return {
+        response: response.data.response,
+        sessionId: response.data.session_id,
+        personas: response.data.personas || [],
+        sources: response.data.sources || [],
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
 }
 
 // Create a singleton instance

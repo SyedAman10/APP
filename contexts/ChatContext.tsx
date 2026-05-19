@@ -349,14 +349,14 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     user?.profile,
   ]);
 
-  // ====== PERSONA AGENT — handled by backend /api/chat ======
-  // The backend persona agent in lmn8-backend/app/agents/persona_agent.py:
-  //   1. Fetches celebrity profiles from DB
-  //   2. Fetches fresh tweets  
-  //   3. Generates reply using HuggingFace LLM
-  //   4. Saves messages
-  // It uses onboarding data (the 14 questions) to determine persona + build user context.
-  // ============================================================
+  // ====== THERAPY AGENT — handled by backend /api/therapy-chat ======
+  // The therapy agent in lmn8-backend/app/routers/therapy_chat.py:
+  //   1. Runs persona analysis (profiles + tweets) for communication style
+  //   2. Builds user context (name, disease, goals from AuthContext)
+  //   3. Runs ketamine agent with document knowledge base + persona style + user context
+  // Uses onboarding data to determine treatment approach + communication style.
+  // The persona agent informs HOW to talk; the ketamine agent drives WHAT to say.
+  // ================================================================
 
   const sendMessage = async (message: string) => {
     const trimmedMessage = message.trim();
@@ -395,19 +395,27 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       const chatSessionId = activeSession?.backendSessionId || sessionKey;
 
       if (aiService && isAIAvailable) {
-        const personaResult = await aiService.personaChat(
+        const userContext = user ? {
+          name: user.fullName,
+          goals: user.therapeuticGoals,
+        } : undefined;
+
+        const therapyResult = await aiService.therapyChat(
           chatSessionId,
           trimmedMessage,
-          onboardingPayload,
+          {
+            onboardingData: onboardingPayload,
+            userContext,
+          },
         );
 
         const assistantMessage: ChatMessage = {
           role: 'assistant',
-          content: personaResult.response,
+          content: therapyResult.response,
         };
 
         upsertSession(sessionKey, [...messagesWithUser, assistantMessage], {
-          backendSessionId: personaResult.sessionId || activeSession?.backendSessionId || currentSessionId,
+          backendSessionId: therapyResult.sessionId || activeSession?.backendSessionId || currentSessionId,
           summary: activeSession?.summary || sessionSummary,
         });
       } else {
