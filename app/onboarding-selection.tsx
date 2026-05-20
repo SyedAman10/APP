@@ -79,7 +79,7 @@ export default function OnboardingSelectionScreen() {
                 <View style={styles.featuresList}>
                   <View style={styles.featureItem}>
                     <Text style={styles.featureIcon}>🎯</Text>
-                    <Text style={styles.featureText}>10 detailed questions</Text>
+                    <Text style={styles.featureText}>14 detailed questions</Text>
                   </View>
                   <View style={styles.featureItem}>
                     <Text style={styles.featureIcon}>💭</Text>
@@ -115,7 +115,7 @@ export default function OnboardingSelectionScreen() {
                 <View style={styles.featuresList}>
                   <View style={styles.featureItem}>
                     <Text style={styles.featureIcon}>⚡</Text>
-                    <Text style={styles.featureText}>5 focused questions</Text>
+                    <Text style={styles.featureText}>8 focused questions</Text>
                   </View>
                   <View style={styles.featureItem}>
                     <Text style={styles.featureIcon}>🎨</Text>

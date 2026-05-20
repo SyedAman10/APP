@@ -1,4 +1,5 @@
 import { Config } from '@/constants/Config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface APIResponse<T = any> {
   data?: T;
@@ -52,12 +53,6 @@ export class APIService {
       ...headers,
     };
     
-    // Log the actual URL being called for debugging
-    console.log('🌐 Making API Request:');
-    console.log('Method:', method);
-    console.log('URL:', url);
-    console.log('Headers:', requestHeaders);
-
     const requestOptions: RequestInit = {
       method,
       headers: requestHeaders,
@@ -80,12 +75,6 @@ export class APIService {
       clearTimeout(timeoutId);
 
       const responseData = await response.json().catch(() => ({}));
-      
-      // Log the response for debugging
-      console.log('📡 API Response Received:');
-      console.log('Status:', response.status);
-      console.log('OK:', response.ok);
-      console.log('Data:', responseData);
 
       if (!response.ok) {
         return {
@@ -462,9 +451,70 @@ export interface ClinicianSummariesResponse {
 
 // Journal API methods
 export const journalAPI = {
-  // Create new journal entry (POST)
+  // Create new journal entry (POST) — supports both JSON and multipart
   createEntry: async (entryData: JournalEntryCreateRequest): Promise<APIResponse<JournalEntryResponse>> => {
     console.log('📝 Creating journal entry:', entryData);
+
+    // If voice or photo with file, use multipart upload
+    if (entryData.mediaType === 'voice' || entryData.mediaUrl?.startsWith('file://')) {
+      const formData = new FormData();
+      formData.append('title', entryData.title);
+      formData.append('content', entryData.content);
+      formData.append('media_type', entryData.mediaType);
+      if (entryData.mood !== undefined) formData.append('mood', String(entryData.mood));
+      if (entryData.transcribedText) formData.append('transcribed_text', entryData.transcribedText);
+
+      // Append audio file if voice entry
+      if (entryData.mediaType === 'voice' && entryData.mediaUrl) {
+        const filename = entryData.mediaUrl.split('/').pop() || 'recording.m4a';
+        const ext = filename.split('.').pop()?.toLowerCase() || 'm4a';
+        const mimeType = ext === 'mp3' ? 'audio/mpeg' : ext === 'wav' ? 'audio/wav' : 'audio/mp4';
+        formData.append('audio', {
+          uri: entryData.mediaUrl,
+          type: mimeType,
+          name: filename,
+        } as any);
+      }
+
+      // Append image file if photo/handwritten
+      if ((entryData.mediaType === 'photo' || entryData.mediaType === 'handwritten') && entryData.mediaUrl) {
+        const filename = entryData.mediaUrl.split('/').pop() || 'image.jpg';
+        formData.append('image', {
+          uri: entryData.mediaUrl,
+          type: 'image/jpeg',
+          name: filename,
+        } as any);
+      }
+
+      // Determine the backend URL (same routing as api.post)
+      const endpoint = '/api/backend/journal/entries';
+      const resolvedBaseURL = endpoint.startsWith('/api/backend')
+        ? (apiService as any).backendURL || Config.BACKEND_URL
+        : (apiService as any).baseURL || Config.API_BASE_URL;
+      const url = `${resolvedBaseURL}${endpoint}`;
+
+      try {
+        const storedToken = await AsyncStorage.getItem('auth_token');
+        const existingAuth = (apiService as any).defaultHeaders?.Authorization;
+        const token = existingAuth?.replace('Bearer ', '') || storedToken || '';
+        const response = await fetch(url, {
+          method: 'POST',
+          body: formData,
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        const responseData = await response.json();
+        return {
+          success: response.ok,
+          status: response.status,
+          data: responseData,
+          error: response.ok ? undefined : responseData.error || `HTTP ${response.status}`,
+        };
+      } catch (err: any) {
+        return { success: false, status: 0, error: err.message || 'Network error' };
+      }
+    }
+
+    // Default: JSON post
     return api.post('/api/backend/journal/entries', entryData);
   },
   

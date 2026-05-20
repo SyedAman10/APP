@@ -133,23 +133,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             
             if (hasOnboardingData) {
               console.log('✅ Onboarding already completed in checkAuthStatus');
-              console.log('🔧 Setting isOnboardingComplete to true in checkAuthStatus');
               setIsOnboardingComplete(true);
-              
-              // Update user with profile data
               setUser(prevUser => prevUser ? { 
                 ...prevUser, 
                 profile: profileResponse.data 
               } : null);
-              
-              // Save onboarding completion to storage
               await AsyncStorage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETE, 'true');
-              console.log('💾 Saved onboarding completion to storage in checkAuthStatus');
-            } else {
+            } else if (!onboardingComplete) {
+              // Only set false if local storage also says incomplete
               console.log('ℹ️ Onboarding not completed yet in checkAuthStatus');
               setIsOnboardingComplete(false);
             }
-          } else {
+          } else if (!onboardingComplete) {
             console.log('ℹ️ No profile found in checkAuthStatus - onboarding required');
             setIsOnboardingComplete(false);
           }
@@ -210,13 +205,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         password: data.password
       });
 
-      // Log the response for debugging
-      console.log('📡 API Response:');
-      console.log('Success:', response.success);
-      console.log('Status:', response.status);
-      console.log('Error:', response.error);
-      console.log('Data:', response.data);
-
       if (!response.success) {
         // Always show user-friendly error message for authentication failures
         throw new Error('Invalid email and password');
@@ -270,6 +258,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       setUser(user);
       
+      // Check if we already have onboarding stored locally
+      const storedOnboarding = await AsyncStorage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETE);
+      const locallyComplete = storedOnboarding === 'true';
+
       // Load user profile data and check onboarding status
       try {
         console.log('📖 Loading user profile...');
@@ -278,8 +270,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (profileResponse.success && profileResponse.data) {
           console.log('✅ Profile loaded successfully:', profileResponse.data);
           
-          // Check if onboarding is completed based on profile data
-          // Profile exists and has onboarding fields means onboarding is complete
           const profile = profileResponse.data.profile;
           const hasOnboardingData = profile && (
             profile.goals || 
@@ -293,37 +283,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           
           if (hasOnboardingData) {
             console.log('✅ Onboarding already completed');
-            console.log('🔧 Setting isOnboardingComplete to true');
             setIsOnboardingComplete(true);
-            
-            // Update user with profile data
             setUser(prevUser => prevUser ? { 
               ...prevUser, 
               profile: profileResponse.data 
             } : null);
-            
-            // Save onboarding state to storage
             await AsyncStorage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETE, 'true');
-            console.log('💾 Saved onboarding completion to storage');
-            
-            // Return onboarding status
             return { isOnboardingComplete: true };
-          } else {
-            console.log('ℹ️ Onboarding not completed yet');
-            setIsOnboardingComplete(false);
-            return { isOnboardingComplete: false };
           }
-        } else {
-          console.log('ℹ️ No profile data found - onboarding required');
-          setIsOnboardingComplete(false);
-          return { isOnboardingComplete: false };
         }
       } catch (error) {
         console.error('❌ Error loading profile:', error);
-        // Continue without profile data
-        setIsOnboardingComplete(false);
-        return { isOnboardingComplete: false };
       }
+
+      // Fallback: trust local storage if backend check failed
+      if (locallyComplete) {
+        console.log('ℹ️ Using locally stored onboarding completion');
+        setIsOnboardingComplete(true);
+        return { isOnboardingComplete: true };
+      }
+
+      console.log('ℹ️ Onboarding not completed yet');
+      setIsOnboardingComplete(false);
+      return { isOnboardingComplete: false };
     } catch (error) {
       console.error('Login failed:', error);
       // Always show user-friendly error message for security

@@ -402,13 +402,14 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
 
       if (aiService && isAIAvailable) {
         // Fetch patient's recent journal entries for agent context
-        let recentEntries: { title: string; content: string; mood?: number; createdAt: string }[] = [];
+        let recentEntries: { title: string; content: string; transcribedText?: string | null; mood?: number; createdAt: string }[] = [];
         try {
           const journalRes = await journalAPI.getEntries(1, 5);
           if (journalRes.success && journalRes.data?.data) {
             recentEntries = journalRes.data.data.map((e: any) => ({
               title: e.title || '',
               content: (e.content || '').substring(0, 200),
+              transcribedText: e.transcribed_text || null,
               mood: e.mood,
               createdAt: e.createdAt || e.timestamp || '',
             }));

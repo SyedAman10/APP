@@ -8,7 +8,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -57,18 +57,25 @@ export default function NewEntryScreen() {
   const [isRecording, setIsRecording] = useState(false);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const recordingRef = useRef<Audio.Recording | null>(null);
+  const soundRef = useRef<Audio.Sound | null>(null);
+  const recordingUnloadedRef = useRef(false);
 
-  // Cleanup audio on unmount
+  // Keep refs in sync with state
+  useEffect(() => { recordingRef.current = recording; if (!recording) recordingUnloadedRef.current = true; else recordingUnloadedRef.current = false; }, [recording]);
+  useEffect(() => { soundRef.current = sound; }, [sound]);
+
+  // Cleanup audio on unmount only
   useEffect(() => {
     return () => {
-      if (recording) {
-        recording.stopAndUnloadAsync();
+      if (recordingRef.current && !recordingUnloadedRef.current) {
+        recordingRef.current.stopAndUnloadAsync().catch(() => {});
       }
-      if (sound) {
-        sound.unloadAsync();
+      if (soundRef.current) {
+        soundRef.current.unloadAsync().catch(() => {});
       }
     };
-  }, [recording, sound]);
+  }, []);
 
   const mediaTypes: { 
     type: MediaType; 
@@ -367,6 +374,7 @@ export default function NewEntryScreen() {
       console.log('⏹️ Stopping recording...');
       setIsRecording(false);
       await recording.stopAndUnloadAsync();
+      recordingUnloadedRef.current = true;
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: false,
       });

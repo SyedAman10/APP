@@ -109,9 +109,11 @@ export default function SettingsScreen() {
         });
       } else if (response.error) {
         console.error('Failed to load clinician-sharing preferences:', response.error);
+        Alert.alert('Notice', 'Could not load sharing preferences. Using defaults.');
       }
     } catch (error) {
       console.error('Failed to load clinician-sharing preferences:', error);
+      Alert.alert('Notice', 'Could not load sharing preferences. Using defaults.');
     } finally {
       setIsPreferencesLoading(false);
     }

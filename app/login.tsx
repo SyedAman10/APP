@@ -77,7 +77,6 @@ export default function LoginPageDesign3Compact() {
         router.replace('/onboarding-selection');
       }
     } catch (error) {
-      console.error('Login error:', error);
       showError('Invalid email and password. Please try again.', 'Login Failed');
     } finally {
       setIsSubmitting(false);
