@@ -276,6 +276,26 @@ export class AIService {
       throw error;
     }
   }
+
+  async prefetchPersona(onboardingData: Record<string, any>): Promise<{ status: string; session_id: string | null; personas: string[] }> {
+    try {
+      console.log('Pre-fetching personas at onboarding...');
+      const response = await personaClient.post<{ status: string; session_id: string | null; personas: string[] }>(
+        '/api/prefetch-persona',
+        { onboarding_data: onboardingData }
+      );
+
+      if (!response.success || !response.data) {
+        console.warn('Prefetch persona returned error:', response.error);
+        return { status: 'error', session_id: null, personas: [] };
+      }
+
+      return response.data;
+    } catch (error) {
+      console.error('Prefetch persona error:', error);
+      return { status: 'error', session_id: null, personas: [] };
+    }
+  }
 }
 
 // Create a singleton instance

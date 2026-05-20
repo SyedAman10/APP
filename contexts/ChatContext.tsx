@@ -1,4 +1,5 @@
 import { AIService, ChatMessage } from '@/services/AIService';
+import { journalAPI } from '@/services/APIService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, ReactNode, useContext, useState } from 'react';
 import { useAuth } from './AuthContext';
@@ -313,9 +314,11 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
 
     if (profileData && messages.length === 0) {
       const { idol } = profileData;
+      const greetingName = user?.fullName?.trim() ? user.fullName.trim() : '';
+      const namePrefix = greetingName ? ` ${greetingName}` : '';
       const welcomeMessage = idol
-        ? `Hello! I'm LMN8, inspired by ${idol}. I'm here to support and guide you on your journey. How can I be with you today?`
-        : `Hello! I'm LMN8, your AI companion, ready to help you on your journey. How can I support you today?`;
+        ? `Hello${namePrefix}! I'm LMN8, inspired by ${idol}. I'm here to support and guide you on your journey. How can I be with you today?`
+        : `Hello${namePrefix}! I'm LMN8, your AI companion, ready to help you on your journey. How can I support you today?`;
       const welcomePayload: ChatMessage[] = [{
         role: 'assistant',
         content: welcomeMessage,
@@ -328,9 +331,11 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
 
       console.log('Generated welcome message:', welcomeMessage);
     } else if (!profileData && messages.length === 0) {
+      const greetingName = user?.fullName?.trim() ? user.fullName.trim() : '';
+      const namePrefix = greetingName ? ` ${greetingName}` : '';
       const fallbackPayload: ChatMessage[] = [{
         role: 'assistant',
-        content: `Hello! I'm LMN8, your AI companion, ready to help you on your journey. How can I support you today?`,
+        content: `Hello${namePrefix}! I'm LMN8, your AI companion, ready to help you on your journey. How can I support you today?`,
       }];
       setMessages(fallbackPayload);
       upsertSession(activeSessionKey, fallbackPayload, {
@@ -346,6 +351,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     onboardingData,
     sessionSummary,
     upsertSession,
+    user?.fullName,
     user?.profile,
   ]);
 
@@ -395,9 +401,26 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       const chatSessionId = activeSession?.backendSessionId || sessionKey;
 
       if (aiService && isAIAvailable) {
+        // Fetch patient's recent journal entries for agent context
+        let recentEntries: { title: string; content: string; mood?: number; createdAt: string }[] = [];
+        try {
+          const journalRes = await journalAPI.getEntries(1, 5);
+          if (journalRes.success && journalRes.data?.data) {
+            recentEntries = journalRes.data.data.map((e: any) => ({
+              title: e.title || '',
+              content: (e.content || '').substring(0, 200),
+              mood: e.mood,
+              createdAt: e.createdAt || e.timestamp || '',
+            }));
+          }
+        } catch (_) { /* journal fetch is best-effort */ }
+
         const userContext = user ? {
           name: user.fullName,
+          email: user.email,
+          diagnosis: user.diagnosis || '',
           goals: user.therapeuticGoals,
+          recentEntries,
         } : undefined;
 
         const therapyResult = await aiService.therapyChat(

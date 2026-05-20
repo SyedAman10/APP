@@ -12,6 +12,7 @@ export interface User {
   fullName: string;
   dateOfBirth?: string;
   therapeuticGoals?: string;
+  diagnosis?: string;
   createdAt: string;
   profile?: any;
   token?: string;
@@ -238,6 +239,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         fullName: apiData.patient?.name || 'User',
         dateOfBirth: apiData.patient?.dateOfBirth,
         therapeuticGoals: apiData.patient?.therapeuticGoals,
+        diagnosis: apiData.patient?.diagnosis,
         createdAt: apiData.patient?.createdAt || new Date().toISOString(),
         token: apiData.token,
         username: apiData.user?.username,
@@ -254,6 +256,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           fullName: user.fullName,
           dateOfBirth: user.dateOfBirth,
           therapeuticGoals: user.therapeuticGoals,
+          diagnosis: user.diagnosis,
           createdAt: user.createdAt,
           username: user.username,
         })),

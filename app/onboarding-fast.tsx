@@ -4,6 +4,7 @@ import { LMN8BorderRadius, LMN8Colors, LMN8Spacing, LMN8Typography } from '@/con
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useOnboardingSync } from '@/hooks/useOnboardingSync';
 import { LegacyProfileData, OnboardingRequest, profileAPI } from '@/services/APIService';
+import { AIService } from '@/services/AIService';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -143,6 +144,15 @@ export default function FastTrackOnboardingScreen() {
           
           // Save onboarding completion to storage and context
           await saveOnboardingCompletion(legacyOnboardingData);
+
+          // Pre-fetch tweets for personas so chat is fast on first open
+          try {
+            const aiService = new AIService();
+            const prefetchResult = await aiService.prefetchPersona(onboardingRequest);
+            console.log('✅ Persona tweets pre-fetched:', prefetchResult.personas);
+          } catch (prefetchError) {
+            console.warn('⚠️ Persona pre-fetch skipped (non-fatal):', prefetchError);
+          }
         } else {
           console.warn('⚠️ Onboarding completion failed:', response.error);
           // Continue with onboarding even if API fails
