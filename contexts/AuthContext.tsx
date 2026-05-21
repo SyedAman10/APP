@@ -201,7 +201,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Call the API endpoint using centralized API service
       const response = await api.post('/api/patient-auth/login', {
-        username: data.email,  // Using email as username
+        username: data.email.trim(),  // Using email as username
         password: data.password
       });
 
@@ -307,7 +307,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsOnboardingComplete(false);
       return { isOnboardingComplete: false };
     } catch (error) {
-      console.error('Login failed:', error);
       // Always show user-friendly error message for security
       throw new Error('Invalid email and password');
     }
@@ -321,6 +320,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA),
         AsyncStorage.removeItem(STORAGE_KEYS.ONBOARDING_COMPLETE),
         AsyncStorage.removeItem(STORAGE_KEYS.ONBOARDING_DATA),
+        AsyncStorage.removeItem('chat_sessions_v1'),
       ]);
       
       // Clear auth token from API service

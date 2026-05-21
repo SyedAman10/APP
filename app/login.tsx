@@ -63,8 +63,9 @@ export default function LoginPageDesign3Compact() {
 
     setIsSubmitting(true);
     try {
-      // Use the AuthContext login function which handles the API call
-      const result = await login(formData);
+      // Trim email before sending to prevent trailing space issues
+      const trimmed = { email: formData.email.trim(), password: formData.password };
+      const result = await login(trimmed);
       
       console.log('🔍 Login result:', result);
       

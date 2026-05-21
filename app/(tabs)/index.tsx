@@ -208,7 +208,7 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View style={styles.greetingContainer}>
             <Text style={styles.greetingText}>{getGreeting()}</Text>
-            <Text style={styles.userName}>{user?.email?.split('@')[0] || 'Traveler'}</Text>
+            <Text style={styles.userName}>{user?.fullName || user?.email?.split('@')[0] || 'Traveler'}</Text>
           </View>
           <Text style={styles.welcomeSubtitle}>
             Welcome to your healing space
