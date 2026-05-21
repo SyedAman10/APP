@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.aman121212.LMN8APP",
-        "buildNumber": "3",
+      "buildNumber": "3",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "LMN8 needs microphone access so you can record voice memo journal entries.",
         "NSHealthShareUsageDescription": "LMN8 needs access to your health data to provide personalized mental wellness insights and therapeutic support. Your health data helps us understand stress patterns and provide better care.",
@@ -74,9 +74,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "313e336b-d11b-4573-b3ed-3f33e2e5ce08"
+        "projectId": "8d1e8d8f-900d-4a9c-ba81-916d9a7796dd"
       }
-    }
+    },
+    "owner": "subhan-dev"
   }
 }
- 
