@@ -90,7 +90,7 @@ android {
     namespace 'com.aman121212.LMN8APP'
     defaultConfig {
         applicationId 'com.aman121212.LMN8APP'
-        minSdkVersion rootProject.ext.minSdkVersion
+        minSdkVersion 26
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0.0"
