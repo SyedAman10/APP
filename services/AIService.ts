@@ -1,8 +1,8 @@
 import { Config } from '@/constants/Config';
 import { api, APIService } from '@/services/APIService';
 
-// Dedicated backend client for persona agent calls
-const personaClient = new APIService(Config.PERSONA_API_URL);
+// Dedicated backend client for persona agent calls (60s timeout for slow LLM)
+const personaClient = new APIService(Config.PERSONA_API_URL, 60000);
 
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';

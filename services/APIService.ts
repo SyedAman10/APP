@@ -19,10 +19,12 @@ export class APIService {
   private baseURL: string;
   private backendURL: string;
   private defaultHeaders: Record<string, string>;
+  private defaultTimeout: number;
 
-  constructor(baseURL?: string) {
+  constructor(baseURL?: string, timeout?: number) {
     this.baseURL = baseURL || Config.API_BASE_URL;
     this.backendURL = Config.BACKEND_URL;
+    this.defaultTimeout = timeout || 30000;
     this.defaultHeaders = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -40,7 +42,7 @@ export class APIService {
       method = 'GET',
       headers = {},
       body,
-      timeout = 30000, // Increased timeout to 30 seconds
+      timeout = this.defaultTimeout,
     } = options;
 
     const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;

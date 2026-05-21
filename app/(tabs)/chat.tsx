@@ -34,8 +34,13 @@ export default function ChatScreen() {
   } = useChat();
   const [inputText, setInputText] = useState('');
   const [isDrawerVisible, setIsDrawerVisible] = useState(false);
+  const [headerHeight, setHeaderHeight] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
   const insets = useSafeAreaInsets();
+
+  const handleHeaderLayout = (e: any) => {
+    if (headerHeight === 0) setHeaderHeight(e.nativeEvent.layout.height);
+  };
 
   const handleSendMessage = async () => {
     if (inputText.trim().length === 0) return;
@@ -87,7 +92,7 @@ export default function ChatScreen() {
       <View style={styles.floatingElement2} />
 
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View onLayout={handleHeaderLayout} style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View style={styles.headerContent}>
           <TouchableOpacity
             style={styles.hamburgerButton}
@@ -185,8 +190,8 @@ export default function ChatScreen() {
 
       <KeyboardAvoidingView
         style={styles.chatBody}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        behavior="padding"
+        keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight || 120 : headerHeight || 120}
       >
         {/* Messages */}
         <ScrollView
@@ -248,7 +253,7 @@ export default function ChatScreen() {
         </ScrollView>
 
         {/* Input */}
-        <View style={[styles.inputContainer, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+        <View style={[styles.inputContainer, { paddingBottom: Math.max(insets.bottom, 6) }]}>
           <View style={styles.inputWrapper}>
             <TextInput
               style={styles.textInput}
