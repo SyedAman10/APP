@@ -14,7 +14,7 @@ export const Config = {
   BACKEND_URL:
     process.env.EXPO_PUBLIC_BACKEND_URL ||
     process.env.EXPO_PUBLIC_API_BASE_URL ||
-    'https://5b54a16a5c98.ngrok-free.app',
+    'https://lumen8health.com',
 
   // Persona Agent API (separate local lmn8-backend)
   PERSONA_API_URL: process.env.EXPO_PUBLIC_PERSONA_API_URL || 'https://luminate.snifr.app',
