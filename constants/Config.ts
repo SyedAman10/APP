@@ -17,7 +17,7 @@ export const Config = {
     'https://5b54a16a5c98.ngrok-free.app',
 
   // Persona Agent API (separate local lmn8-backend)
-  PERSONA_API_URL: process.env.EXPO_PUBLIC_PERSONA_API_URL || 'https://luminate.snifr.app/',
+  PERSONA_API_URL: process.env.EXPO_PUBLIC_PERSONA_API_URL || 'https://luminate.snifr.app',
   
   // Chat Configuration
   MAX_CONVERSATION_HISTORY: 4,

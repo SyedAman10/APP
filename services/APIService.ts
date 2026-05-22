@@ -48,7 +48,7 @@ export class APIService {
     const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     const resolvedBaseURL =
       normalizedEndpoint.startsWith('/api/backend') ? this.backendURL : this.baseURL;
-    const url = `${resolvedBaseURL}${normalizedEndpoint}`;
+    const url = `${resolvedBaseURL.replace(/\/+$/, '')}${normalizedEndpoint}`;
     
     const requestHeaders = {
       ...this.defaultHeaders,
