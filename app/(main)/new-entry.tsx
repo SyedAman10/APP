@@ -1,6 +1,8 @@
 import { LMN8Colors, LMN8Spacing, LMN8Typography } from '@/constants/LMN8DesignSystem';
-import { journalAPI, JournalEntryCreateRequest } from '@/services/APIService';
+import { Config } from '@/constants/Config';
+import { journalAPI, JournalEntryCreateRequest, APIService } from '@/services/APIService';
 import { OCRService } from '@/services/OCRService';
+import { useAuth } from '@/contexts/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import * as DocumentPicker from 'expo-document-picker';
@@ -39,8 +41,22 @@ interface EntryFormData {
   audioDuration?: number;
 }
 
+function containsHarmfulContent(text: string): boolean {
+  const harmfulPatterns = [
+    /\b(kill|end|take)\s+(myself|my\s+own\s+life)\b/i,
+    /\b(suicide|suicidal|killing\s+myself)\b/i,
+    /\b(want|going|plan|need)\s+(to\s+)?(die|end\s+it)\b/i,
+    /\b(no\s+(reason|point|will)\s+to\s+(live|go\s+on)|can('t|\s+not)\s+(take\s+it|go\s+on))\b/i,
+    /\b(self[\s-]?harm|cutting|hurt\s+myself)\b/i,
+    /\b(don('t|\s+not)\s+(want|care)\s+to\s+(live|be\s+alive))\b/i,
+    /\b(better\s+off\s+dead|wish\s+(I\s+was|I'm)\s+dead)\b/i,
+  ];
+  return harmfulPatterns.some((pattern) => pattern.test(text));
+}
+
 export default function NewEntryScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const [selectedMediaType, setSelectedMediaType] = useState<MediaType>('text');
   const [formData, setFormData] = useState<EntryFormData>({
     title: '',
@@ -568,6 +584,32 @@ export default function NewEntryScreen() {
 
       if (response.success && response.data) {
         console.log('✅ Entry created successfully:', response.data);
+        
+        // Check for harmful content and trigger crisis alert if needed (fire-and-forget)
+        const contentToCheck = [entryData.title, entryData.content, entryData.transcribedText].filter(Boolean).join(' ');
+        if (containsHarmfulContent(contentToCheck) && user?.email) {
+          console.log('🚨 Harmful content detected in journal entry, sending crisis alert...');
+          (async () => {
+            try {
+              const personaClient = new APIService(Config.PERSONA_API_URL, 30000);
+              await personaClient.post('/api/therapy-chat', {
+                session_id: `journal-crisis-${Date.now()}`,
+                message: `[JOURNAL CRISIS ALERT] Patient wrote a journal entry with harmful content:\n\nTitle: ${entryData.title}\n\nContent: ${entryData.content}${entryData.transcribedText ? `\n\nTranscribed: ${entryData.transcribedText}` : ''}`,
+                onboarding_data: {},
+                user_context: {
+                  name: user?.fullName || 'Unknown',
+                  email: user?.email || '',
+                  diagnosis: '',
+                  goals: '',
+                  source: 'journal_entry',
+                },
+              });
+              console.log('✅ Crisis alert sent successfully');
+            } catch (crisisError) {
+              console.error('❌ Failed to send crisis alert:', crisisError);
+            }
+          })();
+        }
         
         Alert.alert(
           'Entry Saved',
