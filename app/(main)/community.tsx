@@ -246,9 +246,10 @@ export default function CommunityScreen() {
             <Text style={styles.headerTitle}>Community</Text>
             <Text style={styles.headerSubtitle}>Share your journey</Text>
           </View>
-          <TouchableOpacity style={styles.newPostButton}>
+          {/* New Post button - COMMENTED OUT: no backend */}
+          {/* <TouchableOpacity style={styles.newPostButton}>
             <Ionicons name="add-circle" size={28} color={LMN8Colors.accentPrimary} />
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
 
         {/* Category Filters */}

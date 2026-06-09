@@ -3,6 +3,7 @@ import { JourneyThemeCard } from '@/components/JourneyThemeCard';
 import { Milestone, MilestoneCard } from '@/components/MilestoneCard';
 import { LMN8Colors, LMN8Spacing, LMN8Typography } from '@/constants/LMN8DesignSystem';
 import { useAuth } from '@/contexts/AuthContext';
+import { useChat } from '@/contexts/ChatContext';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { clinicianSharingAPI, journalAPI } from '@/services/APIService';
 import { Ionicons } from '@expo/vector-icons';
@@ -90,6 +91,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading, logout } = useAuth();
   const { onboardingData } = useOnboarding();
+  const { sessions } = useChat();
   const [dailyReflection, setDailyReflection] = useState('');
   const [currentStreak, setCurrentStreak] = useState(3); // TODO: Load from backend
   const [showCelebration, setShowCelebration] = useState(false);
@@ -252,7 +254,8 @@ export default function HomeScreen() {
           </View>
         )}
 
-        <TouchableOpacity
+        {/* Conversation Summaries - COMMENTED OUT: no clinician backend */}
+        {/* <TouchableOpacity
           style={styles.summaryAccessCard}
           onPress={() => router.push('/(main)/clinician-summaries')}
           activeOpacity={0.8}
@@ -276,7 +279,7 @@ export default function HomeScreen() {
             </View>
             <Ionicons name="chevron-forward" size={20} color={LMN8Colors.text85} />
           </LinearGradient>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
 
         {/* Journey Progress */}
         <View style={styles.progressSection}>
@@ -298,7 +301,7 @@ export default function HomeScreen() {
               <View style={styles.progressIconCircle}>
                 <Ionicons name="chatbubbles-outline" size={22} color={LMN8Colors.accentPrimary} />
               </View>
-              <Text style={styles.progressNumber}>0</Text>
+              <Text style={styles.progressNumber}>{sessions.filter(s => s.messageCount > 0).length}</Text>
               <Text style={styles.progressLabel}>Conversations</Text>
             </View>
             

@@ -202,7 +202,8 @@ export default function SettingsScreen() {
               </View>
             </View>
 
-            <View style={styles.settingDivider} />
+            {/* Reset Password - COMMENTED OUT: no backend */}
+            {/* <View style={styles.settingDivider} />
 
             <TouchableOpacity style={styles.settingItem} onPress={handlePasswordReset}>
               <View style={styles.settingInfo}>
@@ -210,24 +211,24 @@ export default function SettingsScreen() {
                 <Text style={styles.settingDescription}>Change your account password</Text>
               </View>
               <Text style={styles.settingArrow}>›</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
         </View>
 
-        {/* Voice Stress Monitoring Section */}
-        <View style={styles.section}>
+        {/* Voice Stress Monitoring Section - COMMENTED OUT: no AI model deployed */}
+        {/* <View style={styles.section}>
           <Text style={styles.sectionTitle}>Mental Health Support</Text>
           <VoiceStressSettings 
             onToggle={(enabled) => enabled ? enableMonitoring() : disableMonitoring()}
             isEnabled={isEnabled}
           />
-        </View>
+        </View> */}
 
-        {/* Apple Watch Integration Section */}
-        <View style={styles.section}>
+        {/* Apple Watch Integration Section - COMMENTED OUT: no backend endpoint */}
+        {/* <View style={styles.section}>
           <Text style={styles.sectionTitle}>Health Tracking</Text>
           <AppleWatchSettings />
-        </View>
+        </View> */}
 
         {/* Journey Themes Section */}
         <View style={styles.section}>
@@ -235,8 +236,8 @@ export default function SettingsScreen() {
           <JourneyThemeCard />
         </View>
 
-        {/* Preferences Section */}
-        <View style={styles.section}>
+        {/* Preferences Section - COMMENTED OUT: toggles non-functional */}
+        {/* <View style={styles.section}>
           <Text style={styles.sectionTitle}>Preferences</Text>
           <View style={styles.sectionCard}>
             <View style={styles.settingItem}>
@@ -275,7 +276,7 @@ export default function SettingsScreen() {
               </View>
             </View>
           </View>
-        </View>
+        </View> */}
 
         {/* Clinician Sharing Section */}
         <View style={styles.section}>
@@ -331,7 +332,8 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Data</Text>
           <View style={styles.sectionCard}>
-            <TouchableOpacity style={styles.settingItem} onPress={handleExportData}>
+            {/* Export Data - COMMENTED OUT: not implemented */}
+            {/* <TouchableOpacity style={styles.settingItem} onPress={handleExportData}>
               <View style={styles.settingInfo}>
                 <Text style={styles.settingTitle}>Export Data</Text>
                 <Text style={styles.settingDescription}>Download your journey data</Text>
@@ -339,7 +341,7 @@ export default function SettingsScreen() {
               <Text style={styles.settingArrow}>›</Text>
             </TouchableOpacity>
 
-            <View style={styles.settingDivider} />
+            <View style={styles.settingDivider} /> */}
 
             <TouchableOpacity style={styles.settingItem} onPress={handleResetOnboarding}>
               <View style={styles.settingInfo}>

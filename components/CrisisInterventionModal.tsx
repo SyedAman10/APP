@@ -159,19 +159,21 @@ export const CrisisInterventionModal: React.FC<CrisisInterventionModalProps> = (
                 </TouchableOpacity>
               )}
 
-              <LMN8Button
+              {/* Start Breathing Exercise - COMMENTED OUT: no screen exists */}
+              {/* <LMN8Button
                 title="Start Breathing Exercise"
                 onPress={onStartBreathing}
                 style={styles.actionButton}
                 variant="primary"
-              />
+              /> */}
 
-              <LMN8Button
+              {/* Talk with Your Guide - COMMENTED OUT: no navigation */}
+              {/* <LMN8Button
                 title="Talk with Your Guide"
                 onPress={onTalkToGuide}
                 style={styles.actionButton}
                 variant="secondary"
-              />
+              /> */}
 
               <TouchableOpacity
                 style={styles.dismissButton}
