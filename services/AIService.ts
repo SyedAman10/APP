@@ -248,6 +248,7 @@ export class AIService {
     options?: {
       onboardingData?: Record<string, any>;
       userContext?: Record<string, any>;
+      journalConsent?: boolean;
     }
   ): Promise<{ response: string; sessionId: string; personas: string[]; sources: string[] }> {
     try {
@@ -259,6 +260,7 @@ export class AIService {
           message,
           onboarding_data: options?.onboardingData || {},
           user_context: options?.userContext || {},
+          journal_consent: options?.journalConsent ?? true,
         }
       );
 

@@ -11,6 +11,7 @@ import { useVoiceStress } from '@/contexts/VoiceStressContext';
 import { clinicianSharingAPI, ClinicianSharingPreferences } from '@/services/APIService';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useState } from 'react';
 import {
     Alert,
@@ -46,6 +47,7 @@ export default function SettingsScreen() {
     shareAIConversationSummary: true,
     shareJournalEntrySummary: true,
   });
+  const [journalAiConsent, setJournalAiConsent] = useState(true);
 
   const handleLogout = () => {
     Alert.alert(
@@ -149,9 +151,20 @@ export default function SettingsScreen() {
     setShowPasswordResetModal(true);
   };
 
+  const handleJournalAiConsentToggle = async (value: boolean) => {
+    setJournalAiConsent(value);
+    await AsyncStorage.setItem('journal_ai_consent', value ? 'true' : 'false');
+  };
+
+  const loadJournalAiConsent = async () => {
+    const stored = await AsyncStorage.getItem('journal_ai_consent');
+    setJournalAiConsent(stored !== 'false');
+  };
+
   useFocusEffect(
     useCallback(() => {
       loadClinicianSharingPreferences();
+      loadJournalAiConsent();
     }, [])
   );
 
@@ -277,6 +290,27 @@ export default function SettingsScreen() {
             </View>
           </View>
         </View> */}
+
+        {/* Privacy Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Privacy</Text>
+          <View style={styles.sectionCard}>
+            <View style={styles.settingItem}>
+              <View style={styles.settingInfo}>
+                <Text style={styles.settingTitle}>Allow AI to read my journal entries</Text>
+                <Text style={styles.settingDescription}>
+                  When ON, the AI can read your journal entries for better context. When OFF, the AI won't see any of your entries.
+                </Text>
+              </View>
+              <Switch
+                value={journalAiConsent}
+                onValueChange={handleJournalAiConsentToggle}
+                trackColor={{ false: LMN8Colors.text60, true: LMN8Colors.accentPrimary }}
+                thumbColor="#ffffff"
+              />
+            </View>
+          </View>
+        </View>
 
         {/* Clinician Sharing Section */}
         <View style={styles.section}>

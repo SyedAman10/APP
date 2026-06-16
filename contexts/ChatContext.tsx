@@ -401,27 +401,32 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       const chatSessionId = activeSession?.backendSessionId || sessionKey;
 
       if (aiService && isAIAvailable) {
-        // Fetch patient's recent journal entries for agent context
+        // Check journal consent
+        const journalConsent = await AsyncStorage.getItem('journal_ai_consent');
+        const hasJournalConsent = journalConsent !== 'false';
+
         let recentEntries: { title: string; content: string; transcribedText?: string | null; mood?: number; createdAt: string }[] = [];
-        try {
-          const journalRes = await journalAPI.getEntries(1, 5);
-          if (journalRes.success && journalRes.data?.data) {
-            recentEntries = journalRes.data.data.map((e: any) => ({
-              title: e.title || '',
-              content: (e.content || '').substring(0, 200),
-              transcribedText: e.transcribed_text || null,
-              mood: e.mood,
-              createdAt: e.createdAt || e.timestamp || '',
-            }));
-          }
-        } catch (_) { /* journal fetch is best-effort */ }
+        if (hasJournalConsent) {
+          try {
+            const journalRes = await journalAPI.getEntries(1, 5);
+            if (journalRes.success && journalRes.data?.data) {
+              recentEntries = journalRes.data.data.map((e: any) => ({
+                title: e.title || '',
+                content: (e.content || '').substring(0, 200),
+                transcribedText: e.transcribed_text || null,
+                mood: e.mood,
+                createdAt: e.createdAt || e.timestamp || '',
+              }));
+            }
+          } catch (_) { /* journal fetch is best-effort */ }
+        }
 
         const userContext = user ? {
           name: user.fullName,
           email: user.email,
           diagnosis: user.diagnosis || '',
           goals: user.therapeuticGoals,
-          recentEntries,
+          ...(hasJournalConsent ? { recentEntries } : {}),
         } : undefined;
 
         const therapyResult = await aiService.therapyChat(
@@ -430,6 +435,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
           {
             onboardingData: onboardingPayload,
             userContext,
+            journalConsent: hasJournalConsent,
           },
         );
 
