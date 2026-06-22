@@ -105,6 +105,7 @@ export default function JourneyLogScreen() {
       params: { entryId: entry.id }
     });
   };
+  
 
   const handlePreviousPage = () => {
     if (currentPage > 1) {
