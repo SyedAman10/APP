@@ -76,8 +76,10 @@ export default function JourneyLogScreen() {
         setTotalEntries(pagination?.total || mappedEntries.length);
         console.log(`📊 Loaded ${mappedEntries.length} journal entries`);
       } else {
-        console.error('❌ Failed to load entries:', response.error);
-        Alert.alert('Error', response.error || 'Failed to load your journey entries');
+        if (response.status !== 401) {
+          console.error('❌ Failed to load entries:', response.error);
+          Alert.alert('Error', response.error || 'Failed to load your journey entries');
+        }
         setEntries([]); // Set empty array on error
         setTotalEntries(0);
         setTotalPages(1);

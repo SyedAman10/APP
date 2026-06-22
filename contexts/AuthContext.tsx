@@ -1,7 +1,8 @@
 import { Config } from '@/constants/Config';
-import { api, profileAPI } from '@/services/APIService';
+import { api, profileAPI, APIService } from '@/services/APIService';
 import { databaseService } from '@/services/DatabaseService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router } from 'expo-router';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { Alert } from 'react-native';
 import { useDatabase } from './DatabaseContext';
@@ -78,6 +79,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       checkAuthStatus();
     }
   }, [isDatabaseInitialized]);
+
+  useEffect(() => {
+    APIService.onUnauthorized = () => {
+      Alert.alert(
+        'Session Expired',
+        'Your session has expired. Please login again.',
+        [{ text: 'OK' }]
+      );
+      setTimeout(async () => {
+        await Promise.all([
+          AsyncStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN),
+          AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA),
+          AsyncStorage.removeItem(STORAGE_KEYS.ONBOARDING_COMPLETE),
+          AsyncStorage.removeItem(STORAGE_KEYS.ONBOARDING_DATA),
+          AsyncStorage.removeItem('chat_sessions_v1'),
+        ]).catch(() => {});
+        api.clearAuthToken();
+        setUser(null);
+        setIsOnboardingComplete(false);
+        router.replace('/login');
+      }, 2000);
+    };
+    return () => { APIService.onUnauthorized = null; };
+  }, []);
 
   const checkAuthStatus = async () => {
     try {

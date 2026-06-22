@@ -16,6 +16,8 @@ export interface APIRequestOptions {
 }
 
 export class APIService {
+  static onUnauthorized: (() => void) | null = null;
+
   private baseURL: string;
   private backendURL: string;
   private defaultHeaders: Record<string, string>;
@@ -77,6 +79,15 @@ export class APIService {
       clearTimeout(timeoutId);
 
       const responseData = await response.json().catch(() => ({}));
+
+      if (response.status === 401) {
+        APIService.onUnauthorized?.();
+        return {
+          success: false,
+          status: 401,
+          data: {} as T,
+        };
+      }
 
       if (!response.ok) {
         return {

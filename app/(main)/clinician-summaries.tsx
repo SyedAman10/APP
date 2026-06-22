@@ -1,5 +1,5 @@
 import { LMN8Colors, LMN8Spacing, LMN8Typography } from '@/constants/LMN8DesignSystem';
-import { clinicianSharingAPI, ClinicianSummary, ClinicianSummaryType } from '@/services/APIService';
+import { clinicianSharingAPI, ClinicianSummary, ClinicianSummaryType, journalAPI, JournalEntry } from '@/services/APIService';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -17,9 +17,20 @@ import {
 const { height } = Dimensions.get('window');
 const PAGE_SIZE = 20;
 
+interface JournalDisplayEntry {
+  id: string;
+  title: string;
+  content: string;
+  mediaType: string;
+  mood?: number;
+  transcribedText?: string;
+  createdAt: string;
+}
+
 export default function ClinicianSummariesScreen() {
   const router = useRouter();
   const [summaries, setSummaries] = useState<ClinicianSummary[]>([]);
+  const [journalEntries, setJournalEntries] = useState<JournalDisplayEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [offset, setOffset] = useState(0);
@@ -50,9 +61,46 @@ export default function ClinicianSummariesScreen() {
     }
   };
 
+  const loadJournalEntries = async (reset = false) => {
+    try {
+      if (reset) setIsLoading(true);
+      else setIsLoadingMore(true);
+
+      const page = reset ? 1 : Math.floor(offset / PAGE_SIZE) + 1;
+      const response = await journalAPI.getEntries(page, PAGE_SIZE);
+      if (response.success && response.data) {
+        const apiEntries = response.data.data || [];
+        const mapped: JournalDisplayEntry[] = apiEntries.map((e: JournalEntry) => ({
+          id: e.id || '',
+          title: e.title,
+          content: e.content,
+          mediaType: e.mediaType,
+          mood: e.mood,
+          transcribedText: e.transcribedText,
+          createdAt: e.createdAt || e.timestamp || new Date().toISOString(),
+        }));
+        setJournalEntries((prev) => (reset ? mapped : [...prev, ...mapped]));
+        const pagination = response.data.pagination;
+        setOffset(reset ? mapped.length : offset + mapped.length);
+        setHasMore(pagination ? page < (pagination.totalPages || 1) : mapped.length === PAGE_SIZE);
+      } else {
+        if (reset) setJournalEntries([]);
+      }
+    } catch {
+      if (reset) setJournalEntries([]);
+    } finally {
+      setIsLoading(false);
+      setIsLoadingMore(false);
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
-      loadSummaries(true, summaryType);
+      if (summaryType === 'journal_entry') {
+        loadJournalEntries(true);
+      } else {
+        loadSummaries(true, summaryType);
+      }
     }, [summaryType])
   );
 
@@ -62,7 +110,51 @@ export default function ClinicianSummariesScreen() {
     setOffset(0);
     setHasMore(true);
     setSummaries([]);
-    loadSummaries(true, nextType);
+    setJournalEntries([]);
+    if (nextType === 'journal_entry') {
+      loadJournalEntries(true);
+    } else {
+      loadSummaries(true, nextType);
+    }
+  };
+
+  const getMediaTypeIcon = (mediaType: string): string => {
+    switch (mediaType) {
+      case 'text': return 'document-text-outline';
+      case 'photo': return 'image-outline';
+      case 'handwritten': return 'brush-outline';
+      case 'voice': return 'mic-outline';
+      default: return 'document-outline';
+    }
+  };
+
+  const getMediaTypeLabel = (mediaType: string) => {
+    switch (mediaType) {
+      case 'text': return 'Written';
+      case 'photo': return 'Visual';
+      case 'handwritten': return 'Handwritten';
+      case 'voice': return 'Voice Memo';
+      default: return 'Entry';
+    }
+  };
+
+  const getMediaTypeColor = (mediaType: string) => {
+    switch (mediaType) {
+      case 'text': return LMN8Colors.accentPrimary;
+      case 'photo': return LMN8Colors.accentSecondary;
+      case 'handwritten': return LMN8Colors.accentHighlight;
+      case 'voice': return '#f472b6';
+      default: return LMN8Colors.accentPrimary;
+    }
+  };
+
+  const getMoodColor = (mood?: number) => {
+    if (!mood) return LMN8Colors.text60;
+    if (mood >= 8) return '#4ade80';
+    if (mood >= 6) return '#60a5fa';
+    if (mood >= 4) return '#fbbf24';
+    if (mood >= 2) return '#fb923c';
+    return '#f87171';
   };
 
   const formatDate = (isoDate: string) => {
@@ -146,36 +238,105 @@ export default function ClinicianSummariesScreen() {
           </TouchableOpacity>
         </View>
 
-        {summaries.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Ionicons name="document-text-outline" size={28} color={LMN8Colors.text60} />
-            <Text style={styles.emptyTitle}>No summaries yet</Text>
-            <Text style={styles.emptyText}>When summaries are generated, they will appear here.</Text>
-          </View>
-        ) : (
-          summaries.map((item) => (
-            <View key={item.id} style={styles.summaryCard}>
-              <Text style={styles.summaryText}>{item.summaryText}</Text>
-              <View style={styles.metaRow}>
-                <Text style={styles.metaText}>{formatDate(item.createdAt)}</Text>
-                {item.sourceId ? <Text style={styles.metaText}>Source: {item.sourceId}</Text> : null}
+        {summaryType === 'journal_entry' ? (
+          <>
+            {journalEntries.length === 0 ? (
+              <View style={styles.emptyCard}>
+                <Ionicons name="document-text-outline" size={28} color={LMN8Colors.text60} />
+                <Text style={styles.emptyTitle}>No journal entries yet</Text>
+                <Text style={styles.emptyText}>Your journal entries will appear here once you create them.</Text>
               </View>
-            </View>
-          ))
-        )}
-
-        {hasMore && summaries.length > 0 && (
-          <TouchableOpacity
-            style={styles.loadMoreButton}
-            disabled={isLoadingMore}
-            onPress={() => loadSummaries(false)}
-          >
-            {isLoadingMore ? (
-              <ActivityIndicator size="small" color={LMN8Colors.text100} />
             ) : (
-              <Text style={styles.loadMoreText}>Load More</Text>
+              journalEntries.map((entry) => (
+                <View key={entry.id} style={styles.entryCard}>
+                  <LinearGradient
+                    colors={[`${LMN8Colors.container}98`, `${LMN8Colors.container}95`]}
+                    style={styles.entryCardGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 0, y: 1 }}
+                  >
+                    <View style={styles.entryHeader}>
+                      <View style={styles.entryHeaderLeft}>
+                        <View style={[styles.mediaIconContainer, { backgroundColor: `${getMediaTypeColor(entry.mediaType)}15` }]}>
+                          <Ionicons name={getMediaTypeIcon(entry.mediaType) as any} size={16} color={getMediaTypeColor(entry.mediaType)} />
+                        </View>
+                        <Text style={styles.mediaLabel}>{getMediaTypeLabel(entry.mediaType)}</Text>
+                      </View>
+                      <Text style={styles.entryDate}>{formatDate(entry.createdAt)}</Text>
+                    </View>
+                    <Text style={styles.entryTitle}>{entry.title}</Text>
+                    {entry.content ? (
+                      <Text style={styles.entryContent} numberOfLines={3}>{entry.content}</Text>
+                    ) : null}
+                    {entry.transcribedText ? (
+                      <View style={styles.transcribedBox}>
+                        <View style={styles.transcribedHeader}>
+                          <Ionicons name="text-outline" size={12} color={LMN8Colors.accentSecondary} />
+                          <Text style={styles.transcribedLabel}>Transcribed</Text>
+                        </View>
+                        <Text style={styles.transcribedText} numberOfLines={2}>{entry.transcribedText}</Text>
+                      </View>
+                    ) : null}
+                    {entry.mood ? (
+                      <View style={styles.entryFooter}>
+                        <View style={[styles.moodBadge, { backgroundColor: `${getMoodColor(entry.mood)}20` }]}>
+                          <Text style={[styles.moodText, { color: getMoodColor(entry.mood) }]}>
+                            Mood: {entry.mood}/10
+                          </Text>
+                        </View>
+                      </View>
+                    ) : null}
+                  </LinearGradient>
+                </View>
+              ))
             )}
-          </TouchableOpacity>
+            {hasMore && journalEntries.length > 0 && (
+              <TouchableOpacity
+                style={styles.loadMoreButton}
+                disabled={isLoadingMore}
+                onPress={() => loadJournalEntries(false)}
+              >
+                {isLoadingMore ? (
+                  <ActivityIndicator size="small" color={LMN8Colors.text100} />
+                ) : (
+                  <Text style={styles.loadMoreText}>Load More</Text>
+                )}
+              </TouchableOpacity>
+            )}
+          </>
+        ) : (
+          <>
+            {summaries.length === 0 ? (
+              <View style={styles.emptyCard}>
+                <Ionicons name="document-text-outline" size={28} color={LMN8Colors.text60} />
+                <Text style={styles.emptyTitle}>No summaries yet</Text>
+                <Text style={styles.emptyText}>When summaries are generated, they will appear here.</Text>
+              </View>
+            ) : (
+              summaries.map((item) => (
+                <View key={item.id} style={styles.summaryCard}>
+                  <Text style={styles.summaryText}>{item.summaryText}</Text>
+                  <View style={styles.metaRow}>
+                    <Text style={styles.metaText}>{formatDate(item.createdAt)}</Text>
+                    {item.sourceId ? <Text style={styles.metaText}>Source: {item.sourceId}</Text> : null}
+                  </View>
+                </View>
+              ))
+            )}
+            {hasMore && summaries.length > 0 && (
+              <TouchableOpacity
+                style={styles.loadMoreButton}
+                disabled={isLoadingMore}
+                onPress={() => loadSummaries(false)}
+              >
+                {isLoadingMore ? (
+                  <ActivityIndicator size="small" color={LMN8Colors.text100} />
+                ) : (
+                  <Text style={styles.loadMoreText}>Load More</Text>
+                )}
+              </TouchableOpacity>
+            )}
+          </>
         )}
       </ScrollView>
     </View>
@@ -318,6 +479,104 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: LMN8Colors.text60,
     textAlign: 'center',
+  },
+  entryCard: {
+    marginBottom: LMN8Spacing.md,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  entryCardGradient: {
+    padding: LMN8Spacing.lg,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: `${LMN8Colors.accentPrimary}15`,
+  },
+  entryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: LMN8Spacing.sm,
+  },
+  entryHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: LMN8Spacing.sm,
+  },
+  mediaIconContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mediaLabel: {
+    ...LMN8Typography.label,
+    fontSize: 10,
+    color: LMN8Colors.text85,
+    letterSpacing: 0.6,
+  },
+  entryDate: {
+    ...LMN8Typography.metadata,
+    fontSize: 11,
+    color: LMN8Colors.text60,
+  },
+  entryTitle: {
+    ...LMN8Typography.h3,
+    fontSize: 17,
+    fontWeight: '600',
+    color: LMN8Colors.text100,
+    marginBottom: LMN8Spacing.xs,
+  },
+  entryContent: {
+    ...LMN8Typography.body,
+    fontSize: 13,
+    fontWeight: '300',
+    color: LMN8Colors.text85,
+    lineHeight: 20,
+    marginBottom: LMN8Spacing.sm,
+  },
+  transcribedBox: {
+    backgroundColor: `${LMN8Colors.bgLight}60`,
+    padding: LMN8Spacing.sm,
+    borderRadius: 10,
+    marginBottom: LMN8Spacing.sm,
+    borderLeftWidth: 2,
+    borderLeftColor: LMN8Colors.accentSecondary,
+  },
+  transcribedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 2,
+  },
+  transcribedLabel: {
+    ...LMN8Typography.label,
+    fontSize: 9,
+    color: LMN8Colors.accentSecondary,
+    letterSpacing: 0.8,
+  },
+  transcribedText: {
+    ...LMN8Typography.body,
+    fontSize: 12,
+    fontWeight: '300',
+    color: LMN8Colors.text85,
+    fontStyle: 'italic',
+    lineHeight: 18,
+  },
+  entryFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: LMN8Spacing.xs,
+  },
+  moodBadge: {
+    paddingHorizontal: LMN8Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  moodText: {
+    ...LMN8Typography.metadata,
+    fontSize: 11,
+    fontWeight: '600',
   },
   loadMoreButton: {
     marginTop: LMN8Spacing.md,

@@ -63,9 +63,11 @@ export default function EntryDetailScreen() {
       if (response.success && response.data?.data) {
         setEntry(mapAPIEntryToJourneyEntry(response.data.data));
       } else {
-        console.error('Failed to load entry:', response.error);
+        if (response.status !== 401) {
+          console.error('Failed to load entry:', response.error);
+          Alert.alert('Error', response.error || 'Failed to load entry details');
+        }
         setEntry(null);
-        Alert.alert('Error', response.error || 'Failed to load entry details');
       }
     } catch (error) {
       console.error('Failed to load entry:', error);

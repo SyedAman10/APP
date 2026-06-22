@@ -621,7 +621,7 @@ export default function NewEntryScreen() {
             },
           ]
         );
-      } else {
+      } else if (response.status !== 401) {
         console.error('❌ Failed to create entry:', response.error);
         Alert.alert(
           'Error',

@@ -126,8 +126,6 @@ export default function HomeScreen() {
         } else {
           setJournalEntriesCount(journalResponse.data.data?.length || 0);
         }
-      } else {
-        console.error('Failed to load home journal stats:', journalResponse.error);
       }
 
       if (sharingResponse.success && sharingResponse.data) {
@@ -139,8 +137,6 @@ export default function HomeScreen() {
 
         const isAnySummaryEnabled = shareAIConversationSummary || shareJournalEntrySummary;
         setShowClinicianSharingWarning(!isAnySummaryEnabled);
-      } else {
-        console.error('Failed to load clinician-sharing status:', sharingResponse.error);
       }
     } catch (error) {
       console.error('Failed to load home stats:', error);
@@ -254,8 +250,8 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* Conversation Summaries - COMMENTED OUT: no clinician backend */}
-        {/* <TouchableOpacity
+        {/* Conversation Summaries */}
+        <TouchableOpacity
           style={styles.summaryAccessCard}
           onPress={() => router.push('/(main)/clinician-summaries')}
           activeOpacity={0.8}
@@ -279,7 +275,7 @@ export default function HomeScreen() {
             </View>
             <Ionicons name="chevron-forward" size={20} color={LMN8Colors.text85} />
           </LinearGradient>
-        </TouchableOpacity> */}
+        </TouchableOpacity>
 
         {/* Journey Progress */}
         <View style={styles.progressSection}>
@@ -459,6 +455,7 @@ export default function HomeScreen() {
               <Text style={styles.secondaryActionText}>View Progress</Text>
             </TouchableOpacity>
             
+            {/* Community button - commented out until backend is ready
             <TouchableOpacity 
               style={styles.secondaryActionCard}
               onPress={() => router.push('/(main)/community')}
@@ -467,6 +464,7 @@ export default function HomeScreen() {
               <Ionicons name="people-outline" size={24} color={LMN8Colors.accentPrimary} />
               <Text style={styles.secondaryActionText}>Community</Text>
             </TouchableOpacity>
+            */}
           </View>
         </View>
 
