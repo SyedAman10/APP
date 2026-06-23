@@ -1,5 +1,5 @@
 import { AIService, ChatMessage } from '@/services/AIService';
-import { journalAPI } from '@/services/APIService';
+import { api, journalAPI } from '@/services/APIService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, ReactNode, useContext, useState } from 'react';
 import { useAuth } from './AuthContext';
@@ -438,6 +438,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
             journalConsent: hasJournalConsent,
           },
         );
+
+        api.post('/api/backend/sessions/link', { sessionId: therapyResult.sessionId }).catch(() => {});
 
         const assistantMessage: ChatMessage = {
           role: 'assistant',
