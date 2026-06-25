@@ -191,7 +191,7 @@ export default function ChatScreen() {
       <KeyboardAvoidingView
         style={styles.chatBody}
         behavior="padding"
-        keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight || 120 : headerHeight || 120}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? (headerHeight || 90) : 0}
       >
         {/* Messages */}
         <ScrollView
@@ -253,7 +253,7 @@ export default function ChatScreen() {
         </ScrollView>
 
         {/* Input */}
-        <View style={[styles.inputContainer, { paddingBottom: Math.max(insets.bottom, 6) }]}>
+        <View style={[styles.inputContainer, { paddingBottom: insets.bottom || 4 }]}>
           <View style={styles.inputWrapper}>
             <TextInput
               style={styles.textInput}
@@ -593,7 +593,8 @@ const styles = StyleSheet.create({
   },
 
   inputContainer: {
-    padding: LMN8Spacing.lg,
+    paddingHorizontal: LMN8Spacing.lg,
+    paddingTop: LMN8Spacing.sm,
     backgroundColor: `${LMN8Colors.container}95`,
     borderTopWidth: 1,
     borderTopColor: `${LMN8Colors.accentPrimary}20`,

@@ -48,6 +48,7 @@ export default function TabLayout() {
         name="chat"
         options={{
           title: 'Chat',
+          tabBarHideOnKeyboard: true,
           tabBarIcon: ({ color }) => <IconSymbol size={24} name="message.fill" color={color} />,
         }}
       />

@@ -99,15 +99,10 @@ export default function SettingsScreen() {
       const response = await clinicianSharingAPI.getPreferences();
 
       if (response.success && response.data) {
-        const preferencesFromData = response.data.data;
-        const shareAIConversationSummary =
-          preferencesFromData?.shareAIConversationSummary ?? response.data.shareAIConversationSummary ?? true;
-        const shareJournalEntrySummary =
-          preferencesFromData?.shareJournalEntrySummary ?? response.data.shareJournalEntrySummary ?? true;
-
+        const d = response.data.data || response.data;
         setClinicianSharingPreferences({
-          shareAIConversationSummary,
-          shareJournalEntrySummary,
+          shareAIConversationSummary: d.shareAIConversationSummary ?? d.share_ai_conversation_summary ?? true,
+          shareJournalEntrySummary: d.shareJournalEntrySummary ?? d.share_journal_entry_summary ?? true,
         });
       } else if (response.status !== 401) {
         console.error('Failed to load clinician-sharing preferences:', response.error);
@@ -137,6 +132,13 @@ export default function SettingsScreen() {
       const response = await clinicianSharingAPI.updatePreferences(updatedPreferences);
       if (!response.success) {
         throw new Error(response.error || 'Failed to update preferences');
+      }
+      if (response.data?.data) {
+        const d = response.data.data;
+        setClinicianSharingPreferences({
+          shareAIConversationSummary: d.shareAIConversationSummary ?? d.share_ai_conversation_summary ?? value,
+          shareJournalEntrySummary: d.shareJournalEntrySummary ?? d.share_journal_entry_summary ?? value,
+        });
       }
     } catch (error) {
       console.error('Failed to update clinician-sharing preference:', error);
