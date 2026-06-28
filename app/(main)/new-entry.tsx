@@ -92,16 +92,32 @@ async function transcribeAudioClient(audioUri: string): Promise<string | null> {
     }
 
     console.log('🎙️ Sending to OpenAI Whisper API...');
-    const blob = new Blob([bytes.buffer], { type: 'audio/mp4' });
-    const formData = new FormData();
-    formData.append('model', 'whisper-1');
-    formData.append('response_format', 'text');
-    formData.append('file', blob, 'audio.m4a');
+    const boundary = `LMN8${Date.now()}`;
+    const encoder = new TextEncoder();
+    const headerParts = [
+      `--${boundary}\r\nContent-Disposition: form-data; name="model"\r\n\r\nwhisper-1\r\n`,
+      `--${boundary}\r\nContent-Disposition: form-data; name="response_format"\r\n\r\ntext\r\n`,
+      `--${boundary}\r\nContent-Disposition: form-data; name="language"\r\n\r\nen\r\n`,
+      `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="audio.m4a"\r\nContent-Type: audio/mp4\r\n\r\n`,
+    ];
+    const footer = `\r\n--${boundary}--\r\n`;
+
+    const headerBinary = headerParts.map(p => encoder.encode(p));
+    const footerBinary = encoder.encode(footer);
+    const totalLength = headerBinary.reduce((s, b) => s + b.length, 0) + bytes.length + footerBinary.length;
+    const body = new Uint8Array(totalLength);
+    let offset = 0;
+    for (const part of headerBinary) { body.set(part, offset); offset += part.length; }
+    body.set(bytes, offset); offset += bytes.length;
+    body.set(footerBinary, offset);
 
     const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}` },
-      body: formData,
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: body.buffer,
     });
 
     const result = await response.text();
@@ -110,10 +126,14 @@ async function transcribeAudioClient(audioUri: string): Promise<string | null> {
       console.log('✅ Transcription result:', text.slice(0, 100));
       return text || null;
     }
-    console.error('❌ Whisper API error:', response.status, result?.slice(0, 200));
+    const errorMsg = `Whisper API error ${response.status}: ${result?.slice(0, 200)}`;
+    console.error('❌', errorMsg);
+    Alert.alert('Transcription Failed', errorMsg);
     return null;
   } catch (error) {
-    console.error('❌ Client transcription error:', error);
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error('❌ Client transcription error:', errorMsg);
+    Alert.alert('Transcription Error', errorMsg);
     return null;
   }
 }
