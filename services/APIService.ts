@@ -52,19 +52,21 @@ export class APIService {
       normalizedEndpoint.startsWith('/api/backend') ? this.backendURL : this.baseURL;
     const url = `${resolvedBaseURL.replace(/\/+$/, '')}${normalizedEndpoint}`;
     
+    const isFormData = body instanceof FormData;
+    
     const requestHeaders = {
-      ...this.defaultHeaders,
+      ...(isFormData ? {} : this.defaultHeaders),
       ...headers,
     };
     
     const requestOptions: RequestInit = {
       method,
       headers: requestHeaders,
-      credentials: 'include', // Important for cookies
+      credentials: 'include',
     };
 
     if (body && method !== 'GET') {
-      requestOptions.body = typeof body === 'string' ? body : JSON.stringify(body);
+      requestOptions.body = isFormData ? body : (typeof body === 'string' ? body : JSON.stringify(body));
     }
 
     try {
@@ -81,7 +83,9 @@ export class APIService {
       const responseData = await response.json().catch(() => ({}));
 
       if (response.status === 401) {
-        APIService.onUnauthorized?.();
+        if (!endpoint.includes('/login')) {
+          APIService.onUnauthorized?.();
+        }
         return {
           success: false,
           status: 401,
@@ -557,6 +561,53 @@ export const journalAPI = {
   deleteEntry: async (id: string): Promise<APIResponse> => {
     console.log('🗑️ Deleting journal entry:', id);
     return api.delete(`/api/backend/journal/entries/${id}`);
+  },
+};
+
+export interface CommunityPost {
+  id: number;
+  patientUserId: number;
+  authorName: string;
+  content: string;
+  likeCount: number;
+  commentCount: number;
+  isLiked: boolean;
+  createdAt: string;
+}
+
+export interface CommunityComment {
+  id: number;
+  postId: number;
+  patientUserId: number;
+  authorName: string;
+  content: string;
+  createdAt: string;
+}
+
+// Community API methods
+export const communityAPI = {
+  getPosts: async (page = 1, limit = 20): Promise<APIResponse<{ data: CommunityPost[]; pagination: any }>> => {
+    return api.get(`/api/backend/community/posts?page=${page}&limit=${limit}`);
+  },
+
+  createPost: async (content: string): Promise<APIResponse<{ data: CommunityPost }>> => {
+    return api.post('/api/backend/community/posts', { content });
+  },
+
+  deletePost: async (id: number): Promise<APIResponse> => {
+    return api.delete(`/api/backend/community/posts/${id}`);
+  },
+
+  toggleLike: async (postId: number): Promise<APIResponse<{ data: { liked: boolean; likeCount: number } }>> => {
+    return api.post(`/api/backend/community/posts/${postId}/like`, {});
+  },
+
+  getComments: async (postId: number): Promise<APIResponse<{ data: CommunityComment[] }>> => {
+    return api.get(`/api/backend/community/posts/${postId}/comments`);
+  },
+
+  addComment: async (postId: number, content: string): Promise<APIResponse<{ data: CommunityComment }>> => {
+    return api.post(`/api/backend/community/posts/${postId}/comments`, { content });
   },
 };
 

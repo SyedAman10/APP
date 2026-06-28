@@ -301,24 +301,6 @@ export default function EntryDetailScreen() {
           </View>
         )}
 
-        {/* Transcribed Text Card */}
-        {entry.transcribedText && (
-          <View style={styles.transcribedCard}>
-            <LinearGradient
-              colors={[`${LMN8Colors.accentSecondary}15`, `${LMN8Colors.accentSecondary}08`]}
-              style={styles.transcribedGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <View style={styles.transcribedHeader}>
-                <Ionicons name="text-outline" size={20} color={LMN8Colors.accentSecondary} />
-                <Text style={styles.sectionTitle}>Transcribed Text</Text>
-              </View>
-              <Text style={styles.transcribedText}>{entry.transcribedText}</Text>
-            </LinearGradient>
-          </View>
-        )}
-
         {/* Entry Metadata Card */}
         <View style={styles.metadataCard}>
           <LinearGradient

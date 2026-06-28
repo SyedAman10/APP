@@ -583,8 +583,22 @@ export default function NewEntryScreen() {
       const response = await journalAPI.createEntry(entryData);
 
       if (response.success && response.data) {
-        console.log('✅ Entry created successfully:', response.data);
-        
+        console.log('✅ Entry created successfully:', response.data);      
+
+        // Check for transcription errors and alert user
+        const respData = response.data as any;
+        if (respData.transcriptionError === 'transcription_failed') {
+          Alert.alert(
+            'Voice Note',
+            'Your entry was saved but voice transcription failed. You can try uploading the audio again or type your note manually.'
+          );
+        } else if (respData.transcriptionError === 'transcription_empty') {
+          Alert.alert(
+            'Voice Note',
+            'Your entry was saved but no speech was detected in the recording.'
+          );
+        }
+
         // Check for harmful content and trigger crisis alert if needed (fire-and-forget)
         const contentToCheck = [entryData.title, entryData.content, entryData.transcribedText].filter(Boolean).join(' ');
         if (containsHarmfulContent(contentToCheck) && user?.email) {

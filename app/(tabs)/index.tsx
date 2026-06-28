@@ -209,7 +209,9 @@ export default function HomeScreen() {
             <Text style={styles.userName}>{user?.fullName || user?.email?.split('@')[0] || 'Traveler'}</Text>
           </View>
           <Text style={styles.welcomeSubtitle}>
-            Welcome to your healing space
+            {user?.patientGreetingName
+              ? `Dear ${user.patientGreetingName}, welcome to your healing space`
+              : 'Welcome to your healing space'}
           </Text>
         </View>
 
@@ -455,16 +457,16 @@ export default function HomeScreen() {
               <Text style={styles.secondaryActionText}>View Progress</Text>
             </TouchableOpacity>
             
-            {/* Community button - commented out until backend is ready
-            <TouchableOpacity 
-              style={styles.secondaryActionCard}
-              onPress={() => router.push('/(main)/community')}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="people-outline" size={24} color={LMN8Colors.accentPrimary} />
-              <Text style={styles.secondaryActionText}>Community</Text>
-            </TouchableOpacity>
-            */}
+            {user?.showCommunity !== false && (
+              <TouchableOpacity 
+                style={styles.secondaryActionCard}
+                onPress={() => router.push('/(main)/community')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="people-outline" size={24} color={LMN8Colors.accentPrimary} />
+                <Text style={styles.secondaryActionText}>Community</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 

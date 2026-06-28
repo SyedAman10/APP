@@ -18,6 +18,9 @@ export interface User {
   profile?: any;
   token?: string;
   username?: string;
+  patientGreetingName?: string;
+  showCommunity?: boolean;
+  patientUserId?: number;
 }
 
 interface AuthContextType {
@@ -256,6 +259,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         createdAt: apiData.patient?.createdAt || new Date().toISOString(),
         token: apiData.token,
         username: apiData.user?.username,
+        patientGreetingName: apiData.patient?.patientGreetingName || 'Patient',
+        showCommunity: apiData.patient?.showCommunity !== false,
+        patientUserId: apiData.user?.id || undefined,
       };
 
       console.log('💾 Saving token to AsyncStorage...');
@@ -272,6 +278,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           diagnosis: user.diagnosis,
           createdAt: user.createdAt,
           username: user.username,
+          patientGreetingName: user.patientGreetingName,
+          showCommunity: user.showCommunity,
+          patientUserId: user.patientUserId,
         })),
       ]);
       
