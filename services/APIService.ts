@@ -472,8 +472,20 @@ export const journalAPI = {
   createEntry: async (entryData: JournalEntryCreateRequest): Promise<APIResponse<JournalEntryResponse>> => {
     console.log('📝 Creating journal entry:', entryData);
 
-    // If voice or photo with file, use multipart upload
-    if (entryData.mediaType === 'voice' || entryData.mediaUrl?.startsWith('file://')) {
+    // Voice entries: always send as JSON, skip multipart entirely
+    if (entryData.mediaType === 'voice') {
+      console.log('📝 Voice entry sending as JSON (client-side transcription)');
+      return api.post('/api/backend/journal/entries', {
+        title: entryData.title,
+        content: entryData.content,
+        media_type: entryData.mediaType,
+        mood: entryData.mood,
+        transcribed_text: entryData.transcribedText || null,
+      });
+    }
+
+    // Photo/handwritten entries: use multipart upload for image files
+    if (entryData.mediaType === 'photo' || entryData.mediaType === 'handwritten' || entryData.mediaUrl?.startsWith('file://')) {
       const formData = new FormData();
       formData.append('title', entryData.title);
       formData.append('content', entryData.content);

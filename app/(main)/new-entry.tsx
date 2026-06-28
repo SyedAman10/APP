@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -52,6 +53,65 @@ function containsHarmfulContent(text: string): boolean {
     /\b(better\s+off\s+dead|wish\s+(I\s+was|I'm)\s+dead)\b/i,
   ];
   return harmfulPatterns.some((pattern) => pattern.test(text));
+}
+
+async function transcribeAudioClient(audioUri: string): Promise<string | null> {
+  try {
+    const apiKey = Config.AI_API_KEY;
+    if (!apiKey) {
+      console.warn('⚠️ No OpenAI API key for transcription');
+      return null;
+    }
+    console.log('🎙️ Reading audio file for transcription...');
+    const base64Data = await FileSystem.readAsStringAsync(audioUri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    const binaryStr = atob(base64Data);
+    const bytes = new Uint8Array(binaryStr.length);
+    for (let i = 0; i < binaryStr.length; i++) {
+      bytes[i] = binaryStr.charCodeAt(i);
+    }
+
+    console.log('🎙️ Sending to OpenAI Whisper API...');
+    const boundary = `LMN8${Date.now()}`;
+    const encoder = new TextEncoder();
+    const headerParts = [
+      `--${boundary}\r\nContent-Disposition: form-data; name="model"\r\n\r\nwhisper-1\r\n`,
+      `--${boundary}\r\nContent-Disposition: form-data; name="response_format"\r\n\r\ntext\r\n`,
+      `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="audio.m4a"\r\nContent-Type: audio/mp4\r\n\r\n`,
+    ];
+    const footer = `\r\n--${boundary}--\r\n`;
+
+    const headerBinary = headerParts.map(p => encoder.encode(p));
+    const footerBinary = encoder.encode(footer);
+    const totalLength = headerBinary.reduce((s, b) => s + b.length, 0) + bytes.length + footerBinary.length;
+    const body = new Uint8Array(totalLength);
+    let offset = 0;
+    for (const part of headerBinary) { body.set(part, offset); offset += part.length; }
+    body.set(bytes, offset); offset += bytes.length;
+    body.set(footerBinary, offset);
+
+    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: body.buffer,
+    });
+
+    const result = await response.text();
+    if (response.ok && result) {
+      const text = result.trim();
+      console.log('✅ Transcription result:', text.slice(0, 100));
+      return text || null;
+    }
+    console.error('❌ Whisper API error:', response.status, result?.slice(0, 200));
+    return null;
+  } catch (error) {
+    console.error('❌ Client transcription error:', error);
+    return null;
+  }
 }
 
 export default function NewEntryScreen() {
@@ -561,45 +621,49 @@ export default function NewEntryScreen() {
 
     setIsSubmitting(true);
     try {
+      // Client-side transcription for voice entries
+      let clientTranscribedText = formData.transcribedText;
+      let transcriptionFailed = false;
+      if (selectedMediaType === 'voice' && formData.audioUri && !clientTranscribedText) {
+        const result = await transcribeAudioClient(formData.audioUri);
+        if (result) {
+          clientTranscribedText = result;
+        } else {
+          transcriptionFailed = true;
+        }
+      }
+
       const normalizedContent =
         formData.content.trim() ||
-        (selectedMediaType === 'voice' && formData.audioUri ? 'Voice memo entry' : '');
+        (selectedMediaType === 'voice'
+          ? clientTranscribedText || 'Voice memo entry'
+          : '');
 
-      // Prepare entry data for API
+      const finalContent =
+        selectedMediaType === 'voice' && !formData.content.trim() && clientTranscribedText
+          ? clientTranscribedText
+          : normalizedContent;
+
       const entryData: JournalEntryCreateRequest = {
         title: formData.title,
-        content: normalizedContent,
+        content: finalContent,
         mediaType: selectedMediaType,
         mood: formData.mood,
-        // Include media URI (image for photo/handwritten, audio for voice)
-        mediaUrl: selectedMediaType === 'voice' ? formData.audioUri : formData.imageUri,
-        // Include transcribed text for handwritten entries
-        transcribedText: formData.transcribedText,
+        mediaUrl: selectedMediaType === 'voice' ? undefined : formData.imageUri,
+        transcribedText: clientTranscribedText,
       };
 
       console.log('📝 Creating journal entry:', entryData);
-      
-      // Call the API to create the entry
+
       const response = await journalAPI.createEntry(entryData);
 
       if (response.success && response.data) {
-        console.log('✅ Entry created successfully:', response.data);      
+        console.log('✅ Entry created successfully:', response.data);
 
-        // Check for transcription errors and alert user
-        const respData = response.data as any;
-        if (respData.transcriptionError === 'transcription_failed') {
-          Alert.alert(
-            'Voice Note',
-            'Your entry was saved but voice transcription failed. You can try uploading the audio again or type your note manually.'
-          );
-        } else if (respData.transcriptionError === 'transcription_empty') {
-          Alert.alert(
-            'Voice Note',
-            'Your entry was saved but no speech was detected in the recording.'
-          );
+        if (transcriptionFailed) {
+          console.log('⚠️ Voice transcription failed — entry saved without transcription');
         }
 
-        // Check for harmful content and trigger crisis alert if needed (fire-and-forget)
         const contentToCheck = [entryData.title, entryData.content, entryData.transcribedText].filter(Boolean).join(' ');
         if (containsHarmfulContent(contentToCheck) && user?.email) {
           console.log('🚨 Harmful content detected in journal entry, sending crisis alert...');
@@ -624,7 +688,7 @@ export default function NewEntryScreen() {
             }
           })();
         }
-        
+
         Alert.alert(
           'Entry Saved',
           'Your journal entry has been saved successfully!',
