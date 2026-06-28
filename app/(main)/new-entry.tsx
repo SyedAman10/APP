@@ -55,6 +55,25 @@ function containsHarmfulContent(text: string): boolean {
   return harmfulPatterns.some((pattern) => pattern.test(text));
 }
 
+function base64ToBinaryString(base64: string): string {
+  if (typeof atob === 'function') return atob(base64);
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  const lookup: Record<string, number> = {};
+  for (let i = 0; i < chars.length; i++) lookup[chars[i]] = i;
+  const clean = base64.replace(/[^A-Za-z0-9+/]/g, '');
+  let result = '';
+  for (let i = 0; i < clean.length; i += 4) {
+    const a = lookup[clean[i]] || 0;
+    const b = lookup[clean[i + 1]] || 0;
+    const c = lookup[clean[i + 2]] || 0;
+    const d = lookup[clean[i + 3]] || 0;
+    result += String.fromCharCode((a << 2) | (b >> 4));
+    if (i + 2 < clean.length) result += String.fromCharCode(((b & 15) << 4) | (c >> 2));
+    if (i + 3 < clean.length) result += String.fromCharCode(((c & 3) << 6) | d);
+  }
+  return result;
+}
+
 async function transcribeAudioClient(audioUri: string): Promise<string | null> {
   try {
     const apiKey = Config.AI_API_KEY;
@@ -66,38 +85,23 @@ async function transcribeAudioClient(audioUri: string): Promise<string | null> {
     const base64Data = await FileSystem.readAsStringAsync(audioUri, {
       encoding: FileSystem.EncodingType.Base64,
     });
-    const binaryStr = atob(base64Data);
+    const binaryStr = base64ToBinaryString(base64Data);
     const bytes = new Uint8Array(binaryStr.length);
     for (let i = 0; i < binaryStr.length; i++) {
       bytes[i] = binaryStr.charCodeAt(i);
     }
 
     console.log('🎙️ Sending to OpenAI Whisper API...');
-    const boundary = `LMN8${Date.now()}`;
-    const encoder = new TextEncoder();
-    const headerParts = [
-      `--${boundary}\r\nContent-Disposition: form-data; name="model"\r\n\r\nwhisper-1\r\n`,
-      `--${boundary}\r\nContent-Disposition: form-data; name="response_format"\r\n\r\ntext\r\n`,
-      `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="audio.m4a"\r\nContent-Type: audio/mp4\r\n\r\n`,
-    ];
-    const footer = `\r\n--${boundary}--\r\n`;
-
-    const headerBinary = headerParts.map(p => encoder.encode(p));
-    const footerBinary = encoder.encode(footer);
-    const totalLength = headerBinary.reduce((s, b) => s + b.length, 0) + bytes.length + footerBinary.length;
-    const body = new Uint8Array(totalLength);
-    let offset = 0;
-    for (const part of headerBinary) { body.set(part, offset); offset += part.length; }
-    body.set(bytes, offset); offset += bytes.length;
-    body.set(footerBinary, offset);
+    const blob = new Blob([bytes.buffer], { type: 'audio/mp4' });
+    const formData = new FormData();
+    formData.append('model', 'whisper-1');
+    formData.append('response_format', 'text');
+    formData.append('file', blob, 'audio.m4a');
 
     const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
-      headers: {
-        'Content-Type': `multipart/form-data; boundary=${boundary}`,
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: body.buffer,
+      headers: { Authorization: `Bearer ${apiKey}` },
+      body: formData,
     });
 
     const result = await response.text();
