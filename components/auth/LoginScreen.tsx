@@ -85,7 +85,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.logo}>LMN8</Text>
+          <Text style={styles.logo}>METAT8</Text>
           <Text style={styles.tagline}>Welcome back to your sacred space</Text>
         </View>
 
@@ -93,7 +93,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         <View style={styles.formContainer}>
           <Text style={styles.title}>Sign In</Text>
           <Text style={styles.subtitle}>
-            Continue your therapeutic journey with LMN8 KTC
+            Continue your therapeutic journey with METAT8 KTC
           </Text>
 
           <LMN8Input
@@ -153,7 +153,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         <View style={styles.welcomeContainer}>
           <Text style={styles.welcomeTitle}>Your Journey Awaits</Text>
           <Text style={styles.welcomeText}>
-            LMN8 KTC provides a safe, private space for your therapeutic growth. 
+            METAT8 KTC provides a safe, private space for your therapeutic growth. 
             All your data is stored locally and encrypted for complete privacy.
           </Text>
         </View>

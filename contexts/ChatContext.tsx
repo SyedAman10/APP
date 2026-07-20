@@ -317,8 +317,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       const greetingName = user?.fullName?.trim() ? user.fullName.trim() : '';
       const namePrefix = greetingName ? ` ${greetingName}` : '';
       const welcomeMessage = idol
-        ? `Hello${namePrefix}! I'm LMN8, inspired by ${idol}. I'm here to support and guide you on your journey. How can I be with you today?`
-        : `Hello${namePrefix}! I'm LMN8, your AI companion, ready to help you on your journey. How can I support you today?`;
+        ? `Hello${namePrefix}! I'm METAT8, inspired by ${idol}. I'm here to support and guide you on your journey. How can I be with you today?`
+        : `Hello${namePrefix}! I'm METAT8, your AI companion, ready to help you on your journey. How can I support you today?`;
       const welcomePayload: ChatMessage[] = [{
         role: 'assistant',
         content: welcomeMessage,
@@ -335,7 +335,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       const namePrefix = greetingName ? ` ${greetingName}` : '';
       const fallbackPayload: ChatMessage[] = [{
         role: 'assistant',
-        content: `Hello${namePrefix}! I'm LMN8, your AI companion, ready to help you on your journey. How can I support you today?`,
+        content: `Hello${namePrefix}! I'm METAT8, your AI companion, ready to help you on your journey. How can I support you today?`,
       }];
       setMessages(fallbackPayload);
       upsertSession(activeSessionKey, fallbackPayload, {
@@ -453,7 +453,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       } else {
         const assistantMessage: ChatMessage = {
           role: 'assistant',
-          content: "I'm LMN8, your AI companion. I'm here to support you, but I need to connect to the server first. Please try again in a moment.",
+          content: "I'm METAT8, your AI companion. I'm here to support you, but I need to connect to the server first. Please try again in a moment.",
         };
 
         upsertSession(sessionKey, [...messagesWithUser, assistantMessage], {

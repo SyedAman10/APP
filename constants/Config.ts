@@ -6,7 +6,7 @@ export const Config = {
   AI_MODEL: process.env.EXPO_PUBLIC_AI_MODEL || 'gpt-4o-mini',
   
   // App Configuration
-  APP_NAME: 'LMN8',
+  APP_NAME: 'METAT8',
   APP_VERSION: '1.0.0',
   
   // Backend API Configuration

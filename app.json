@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "LMN8",
+    "name": "METAT8",
     "slug": "lmn8",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -10,12 +10,12 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.aman121212.LMN8APP",
+      "bundleIdentifier": "com.aman121212.METAT8APP",
       "buildNumber": "3",
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "LMN8 needs microphone access so you can record voice memo journal entries.",
-        "NSHealthShareUsageDescription": "LMN8 needs access to your health data to provide personalized mental wellness insights and therapeutic support. Your health data helps us understand stress patterns and provide better care.",
-        "NSHealthUpdateUsageDescription": "LMN8 needs permission to access your health data to monitor your wellness metrics.",
+        "NSMicrophoneUsageDescription": "METAT8 needs microphone access so you can record voice memo journal entries.",
+        "NSHealthShareUsageDescription": "METAT8 needs access to your health data to provide personalized mental wellness insights and therapeutic support. Your health data helps us understand stress patterns and provide better care.",
+        "NSHealthUpdateUsageDescription": "METAT8 needs permission to access your health data to monitor your wellness metrics.",
         "UIBackgroundModes": [
           "fetch",
           "fetch"
@@ -33,7 +33,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": false,
-      "package": "com.aman121212.LMN8APP",
+      "package": "com.aman121212.METAT8APP",
       "versionCode": 1,
       "permissions": [
         "android.permission.RECORD_AUDIO",

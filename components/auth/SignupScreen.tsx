@@ -101,7 +101,7 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.logo}>LMN8</Text>
+          <Text style={styles.logo}>METAT8</Text>
           <Text style={styles.tagline}>Your Sacred Space for Therapeutic Growth</Text>
         </View>
 
@@ -109,7 +109,7 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({
         <View style={styles.formContainer}>
           <Text style={styles.title}>Create Your Account</Text>
           <Text style={styles.subtitle}>
-            Begin your therapeutic journey with LMN8 KTC
+            Begin your therapeutic journey with METAT8 KTC
           </Text>
 
           <LMN8Input

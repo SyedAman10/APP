@@ -37,7 +37,7 @@ export const LMN8SplashScreen: React.FC = () => {
         <Animated.View style={[styles.logoGlow, { opacity: glowOpacity }]}>
           <Text style={styles.logo}>8</Text>
         </Animated.View>
-        <Text style={styles.logoText}>LMN8</Text>
+        <Text style={styles.logoText}>METAT8</Text>
         <Text style={styles.tagline}>Your Sacred Space</Text>
       </View>
       

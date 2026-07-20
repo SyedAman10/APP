@@ -77,7 +77,7 @@ export default function IndexPage() {
     return (
       <View style={styles.container}>
         <View style={styles.loadingContent}>
-          <Text style={styles.loadingText}>Initializing LMN8...</Text>
+          <Text style={styles.loadingText}>Initializing METAT8...</Text>
           <Text style={styles.subText}>
             {!isDatabaseInitialized ? 'Setting up database...' : 'Checking authentication...'}
           </Text>

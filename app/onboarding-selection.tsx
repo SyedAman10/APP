@@ -55,7 +55,7 @@ export default function OnboardingSelectionScreen() {
            {/* Header */}
            <View style={styles.header}>
              <View style={styles.logoWrapper}>
-               <Text style={styles.logo}>LMN8</Text>
+               <Text style={styles.logo}>METAT8</Text>
                <View style={styles.logoUnderline} />
              </View>
              <Text style={styles.title}>Design Your AI Companion</Text>

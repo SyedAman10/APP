@@ -420,7 +420,7 @@ export default function SettingsScreen() {
 
         {/* App Info */}
         <View style={styles.appInfo}>
-          <Text style={styles.appName}>LMN8</Text>
+          <Text style={styles.appName}>METAT8</Text>
           <Text style={styles.appDescription}>
             Your AI companion for personal growth and therapeutic support
           </Text>
