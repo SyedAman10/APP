@@ -8,13 +8,13 @@ The app now integrates with the backend API to save and load user profile data f
 
 ### Update Profile
 - **Method:** `PUT`
-- **URL:** `/api/patient-auth/profile`
+- **URL:** `/api/app-auth/profile`
 - **Headers:** `Content-Type: application/json`
 - **Body:** Profile data object
 
 ### Get Profile
 - **Method:** `GET`
-- **URL:** `/api/patient-auth/profile`
+- **URL:** `/api/app-auth/profile`
 - **Headers:** `Content-Type: application/json`
 
 ## Profile Data Structure
@@ -39,7 +39,7 @@ interface ProfileData {
 When users complete the onboarding flow:
 
 1. **Data Collection:** All 8 onboarding questions are collected
-2. **API Call:** Profile data is sent to backend via `PUT /api/patient-auth/profile`
+2. **API Call:** Profile data is sent to backend via `PUT /api/app-auth/profile`
 3. **Error Handling:** If API call fails, onboarding continues (graceful degradation)
 4. **Success Logging:** Console logs confirm successful save
 
@@ -57,7 +57,7 @@ if (response.success) {
 When users log in:
 
 1. **Authentication:** User credentials are validated
-2. **Profile Loading:** User's profile data is fetched via `GET /api/patient-auth/profile`
+2. **Profile Loading:** User's profile data is fetched via `GET /api/app-auth/profile`
 3. **User Object:** Profile data is attached to the user object
 4. **Fallback:** If profile loading fails, user can still proceed
 
@@ -75,11 +75,11 @@ Centralized API methods for profile operations:
 ```typescript
 export const profileAPI = {
   updateProfile: async (profileData: ProfileData): Promise<APIResponse> => {
-    return api.put('/api/patient-auth/profile', profileData);
+    return api.put('/api/app-auth/profile', profileData);
   },
   
   getProfile: async (): Promise<APIResponse> => {
-    return api.get('/api/patient-auth/profile');
+    return api.get('/api/app-auth/profile');
   },
 };
 ```
@@ -94,7 +94,7 @@ The integration includes comprehensive logging:
 📝 Updating user profile: { idol: "Elon Musk", personality: "Creative...", ... }
 🌐 Making API Request:
 Method: PUT
-URL: https://your-api.com/api/patient-auth/profile
+URL: https://your-api.com/api/app-auth/profile
 ✅ Profile saved successfully: { success: true, ... }
 ```
 
@@ -104,7 +104,7 @@ URL: https://your-api.com/api/patient-auth/profile
 📖 Fetching user profile
 🌐 Making API Request:
 Method: GET
-URL: https://your-api.com/api/patient-auth/profile
+URL: https://your-api.com/api/app-auth/profile
 ✅ Profile loaded successfully: { idol: "Elon Musk", ... }
 ```
 
@@ -133,7 +133,7 @@ URL: https://your-api.com/api/patient-auth/profile
 ### API Testing
 ```bash
 # Test profile update
-curl -X PUT http://localhost:3001/api/patient-auth/profile \
+curl -X PUT http://localhost:3001/api/app-auth/profile \
   -H "Content-Type: application/json" \
   -b patient_cookies.txt \
   -d '{
@@ -148,7 +148,7 @@ curl -X PUT http://localhost:3001/api/patient-auth/profile \
   }'
 
 # Test profile retrieval
-curl -X GET http://localhost:3001/api/patient-auth/profile \
+curl -X GET http://localhost:3001/api/app-auth/profile \
   -H "Content-Type: application/json" \
   -b patient_cookies.txt
 ```

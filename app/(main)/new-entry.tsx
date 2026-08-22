@@ -666,6 +666,7 @@ export default function NewEntryScreen() {
                   goals: '',
                   source: 'journal_entry',
                 },
+                user_type: user?.userType || 'patient',
               });
               console.log('✅ Crisis alert sent successfully');
             } catch (crisisError) {

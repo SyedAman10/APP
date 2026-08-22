@@ -94,6 +94,7 @@ export default function OnboardingScreen() {
   const { setOnboardingData } = useOnboarding();
   const [currentStep, setCurrentStep] = useState(0);
   const [showProfileCompletion, setShowProfileCompletion] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
   const [onboardingData, setOnboardingDataLocal] = useState<OnboardingData>({
     idol: '',
     personality: '',
@@ -111,6 +112,7 @@ export default function OnboardingScreen() {
 
   const handleNext = async () => {
     if (isLastStep) {
+      setIsCompleting(true);
       // Complete onboarding and save data
       setOnboardingData(onboardingData);
       
@@ -139,6 +141,8 @@ export default function OnboardingScreen() {
       } catch (error) {
         console.error('❌ Error saving profile:', error);
         // Continue with onboarding even if profile save fails
+      } finally {
+        setIsCompleting(false);
       }
       
       setShowProfileCompletion(true);
@@ -267,9 +271,10 @@ export default function OnboardingScreen() {
                     )}
                     
                     <LMN8Button
-                      title={isLastStep ? "Complete Setup" : "Next"}
+                      title={isLastStep ? (isCompleting ? "Saving..." : "Complete Setup") : "Next"}
                       onPress={handleNext}
-                      disabled={!canProceed}
+                      disabled={!canProceed || isCompleting}
+                      loading={isLastStep && isCompleting}
                       size="large"
                       style={styles.nextButton}
                     />

@@ -20,7 +20,9 @@ export interface User {
   username?: string;
   patientGreetingName?: string;
   showCommunity?: boolean;
+  countryType?: 'US' | 'Pakistan';
   patientUserId?: number;
+  userType?: 'patient' | 'student';
 }
 
 interface AuthContextType {
@@ -223,12 +225,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Log the API configuration for debugging
       console.log('🔗 API Configuration:');
       console.log('Base URL:', Config.API_BASE_URL);
-      console.log('Full Login URL:', `${Config.API_BASE_URL}/api/patient-auth/login`);
+      console.log('Full Login URL:', `${Config.API_BASE_URL}/api/app-auth/login`);
       console.log('Environment Variable:', process.env.EXPO_PUBLIC_API_BASE_URL || 'Not set (using default)');
       console.log('Login Data:', { username: data.email, password: '***' });
-      
-      // Call the API endpoint using centralized API service
-      const response = await api.post('/api/patient-auth/login', {
+
+      // Call the unified login endpoint (auto-detects patient or student)
+      const response = await api.post('/api/app-auth/login', {
         username: data.email.trim(),  // Using email as username
         password: data.password
       });
@@ -248,20 +250,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       console.log('✅ Token received from API');
       
-      // Create user object from API response based on your new structure
+      // Create user object from API response — handles both patient and student
+      const userRecord = apiData.patient || apiData.student;
       const user: User = {
-        id: apiData.patient?.id || apiData.user?.id || Date.now().toString(),
-        email: apiData.patient?.email || data.email,
-        fullName: apiData.patient?.name || 'User',
-        dateOfBirth: apiData.patient?.dateOfBirth,
-        therapeuticGoals: apiData.patient?.therapeuticGoals,
-        diagnosis: apiData.patient?.diagnosis,
-        createdAt: apiData.patient?.createdAt || new Date().toISOString(),
+        id: userRecord?.id || apiData.user?.id || Date.now().toString(),
+        email: userRecord?.email || data.email,
+        fullName: userRecord?.name || 'User',
+        dateOfBirth: userRecord?.dateOfBirth,
+        therapeuticGoals: userRecord?.therapeuticGoals,
+        diagnosis: userRecord?.diagnosis,
+        createdAt: userRecord?.createdAt || new Date().toISOString(),
         token: apiData.token,
         username: apiData.user?.username,
-        patientGreetingName: apiData.patient?.patientGreetingName || 'Patient',
-        showCommunity: apiData.patient?.showCommunity !== false,
-        patientUserId: apiData.user?.id || undefined,
+        patientGreetingName: userRecord?.patientGreetingName || userRecord?.studentGreetingName || 'User',
+    showCommunity: userRecord?.showCommunity !== false,
+    countryType: userRecord?.countryType || 'US',
+    patientUserId: apiData.user?.id || undefined,
+        userType: apiData.userType || 'patient',
       };
 
       console.log('💾 Saving token to AsyncStorage...');
@@ -279,8 +284,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           createdAt: user.createdAt,
           username: user.username,
           patientGreetingName: user.patientGreetingName,
-          showCommunity: user.showCommunity,
-          patientUserId: user.patientUserId,
+    showCommunity: user.showCommunity,
+    countryType: user.countryType,
+    patientUserId: user.patientUserId,
+          userType: user.userType,
         })),
       ]);
       

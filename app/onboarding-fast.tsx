@@ -89,6 +89,7 @@ export default function FastTrackOnboardingScreen() {
   const { saveOnboardingCompletion } = useOnboardingSync();
   const [currentStep, setCurrentStep] = useState(0);
   const [showProfileCompletion, setShowProfileCompletion] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
   const [onboardingData, setOnboardingDataLocal] = useState<FastTrackOnboardingData>({
     inspirationFigure: '',
     inspirationQuality: '',
@@ -106,6 +107,7 @@ export default function FastTrackOnboardingScreen() {
 
   const handleNext = async () => {
     if (isLastStep) {
+      setIsCompleting(true);
       // Complete onboarding and save data
       const onboardingRequest: OnboardingRequest = {
         inspirationFigure: onboardingData.inspirationFigure,
@@ -160,6 +162,8 @@ export default function FastTrackOnboardingScreen() {
       } catch (error) {
         console.error('❌ Error completing onboarding:', error);
         // Continue with onboarding even if API fails
+      } finally {
+        setIsCompleting(false);
       }
       
       setShowProfileCompletion(true);
@@ -286,9 +290,10 @@ export default function FastTrackOnboardingScreen() {
                     )}
                     
                     <LMN8Button
-                      title={isLastStep ? "Complete Setup" : "Next"}
+                      title={isLastStep ? (isCompleting ? "Saving..." : "Complete Setup") : "Next"}
                       onPress={handleNext}
-                      disabled={!canProceed}
+                      disabled={!canProceed || isCompleting}
+                      loading={isLastStep && isCompleting}
                       size="large"
                       style={styles.nextButton}
                     />

@@ -7,7 +7,7 @@ The LMN8 app now features a fully personalized AI companion that uses the user's
 ## Personalization Data Sources
 
 ### Primary Source: Backend Profile Data
-- **Source:** User profile loaded from `/api/patient-auth/profile` after login
+- **Source:** User profile loaded from `/api/app-auth/profile` after login
 - **Priority:** Highest - used when available
 - **Data:** Complete profile with all 8 onboarding questions
 

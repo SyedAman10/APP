@@ -339,25 +339,25 @@ export const profileAPI = {
   // Complete onboarding process (POST)
   completeOnboarding: async (onboardingData: OnboardingRequest): Promise<APIResponse<ProfileResponse>> => {
     console.log('🎯 Completing onboarding:', onboardingData);
-    return api.post('/api/patient-auth/profile', onboardingData);
+    return api.post('/api/app-auth/profile', onboardingData);
   },
   
   // Update individual profile fields (PUT)
   updateProfile: async (profileData: Partial<OnboardingRequest>): Promise<APIResponse<ProfileResponse>> => {
     console.log('📝 Updating profile fields:', profileData);
-    return api.put('/api/patient-auth/profile', profileData);
+    return api.put('/api/app-auth/profile', profileData);
   },
   
   // Get complete profile (GET)
   getProfile: async (): Promise<APIResponse<ProfileResponse>> => {
     console.log('📖 Fetching user profile');
-    return api.get('/api/patient-auth/profile');
+    return api.get('/api/app-auth/profile');
   },
   
   // Legacy method for backward compatibility
   updateLegacyProfile: async (profileData: LegacyProfileData): Promise<APIResponse> => {
     console.log('📝 Updating legacy profile:', profileData);
-    return api.put('/api/patient-auth/profile', profileData);
+    return api.put('/api/app-auth/profile', profileData);
   },
 };
 
@@ -492,18 +492,6 @@ export const journalAPI = {
       formData.append('media_type', entryData.mediaType);
       if (entryData.mood !== undefined) formData.append('mood', String(entryData.mood));
       if (entryData.transcribedText) formData.append('transcribed_text', entryData.transcribedText);
-
-      // Append audio file if voice entry
-      if (entryData.mediaType === 'voice' && entryData.mediaUrl) {
-        const filename = entryData.mediaUrl.split('/').pop() || 'recording.m4a';
-        const ext = filename.split('.').pop()?.toLowerCase() || 'm4a';
-        const mimeType = ext === 'mp3' ? 'audio/mpeg' : ext === 'wav' ? 'audio/wav' : 'audio/mp4';
-        formData.append('audio', {
-          uri: entryData.mediaUrl,
-          type: mimeType,
-          name: filename,
-        } as any);
-      }
 
       // Append image file if photo/handwritten
       if ((entryData.mediaType === 'photo' || entryData.mediaType === 'handwritten') && entryData.mediaUrl) {

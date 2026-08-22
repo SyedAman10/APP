@@ -436,6 +436,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
             onboardingData: onboardingPayload,
             userContext,
             journalConsent: hasJournalConsent,
+            userType: user?.userType,
+            countryType: user?.countryType,
           },
         );
 

@@ -1,8 +1,8 @@
 import { Config } from '@/constants/Config';
 import { api, APIService } from '@/services/APIService';
 
-// Dedicated backend client for persona agent calls (60s timeout for slow LLM)
-const personaClient = new APIService(Config.PERSONA_API_URL, 60000);
+// Dedicated backend client for persona agent calls (120s timeout for slow LLM)
+const personaClient = new APIService(Config.PERSONA_API_URL, 120000);
 
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -249,6 +249,8 @@ export class AIService {
       onboardingData?: Record<string, any>;
       userContext?: Record<string, any>;
       journalConsent?: boolean;
+      userType?: 'patient' | 'student';
+      countryType?: 'US' | 'Pakistan';
     }
   ): Promise<{ response: string; sessionId: string; personas: string[]; sources: string[] }> {
     try {
@@ -261,6 +263,8 @@ export class AIService {
           onboarding_data: options?.onboardingData || {},
           user_context: options?.userContext || {},
           journal_consent: options?.journalConsent ?? true,
+          user_type: options?.userType || 'default',
+          country_type: options?.countryType || 'US',
         }
       );
 

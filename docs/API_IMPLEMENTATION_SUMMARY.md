@@ -2,7 +2,7 @@
 
 ## Overview
 
-Successfully implemented the updated `/api/patient-auth/profile` endpoint in both Full-Track and Fast-Track onboarding screens. The implementation includes:
+Successfully implemented the updated `/api/app-auth/profile` endpoint in both Full-Track and Fast-Track onboarding screens. The implementation includes:
 
 - **New API structure** with proper TypeScript interfaces
 - **Backward compatibility** with existing legacy fields
@@ -150,7 +150,7 @@ const response = await profileAPI.completeOnboarding(onboardingRequest);
 
 ### Full-Track Onboarding Request
 ```json
-POST /api/patient-auth/profile
+POST /api/app-auth/profile
 {
   "inspirationFigure": "Oprah Winfrey",
   "inspirationQuality": "Her gentle wisdom and authenticity",
@@ -172,7 +172,7 @@ POST /api/patient-auth/profile
 
 ### Fast-Track Onboarding Request
 ```json
-POST /api/patient-auth/profile
+POST /api/app-auth/profile
 {
   "inspirationFigure": "Oprah Winfrey",
   "inspirationQuality": "Her gentle wisdom and authenticity",
