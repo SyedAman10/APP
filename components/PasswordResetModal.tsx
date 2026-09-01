@@ -13,7 +13,8 @@ import {
     StyleSheet,
     Text,
     TouchableOpacity,
-    View
+  View,
+  TextInput
 } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
@@ -25,35 +26,94 @@ interface PasswordResetModalProps {
 }
 
 export default function PasswordResetModal({ visible, onClose, userEmail }: PasswordResetModalProps) {
-  const [step, setStep] = useState<'request' | 'instructions'>('request');
+  const [step, setStep] = useState<'request' | 'enterOtp' | 'instructions'>('request');
+  const [email, setEmail] = useState(userEmail || '');
+  const [otp, setOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleRequestReset = async () => {
-    if (!userEmail) {
-      Alert.alert('Error', 'No email address found. Please contact support.');
+    const targetEmail = (email || userEmail || '').trim();
+    if (!targetEmail) {
+      Alert.alert('Error', 'Please enter your email address.');
       return;
     }
 
     setIsLoading(true);
     try {
-      const response = await passwordResetAPI.requestPasswordReset(userEmail);
-      
+      const response = await passwordResetAPI.requestPasswordReset(targetEmail);
+      console.log('forgot-password response:', response);
       if (response.success) {
-        setStep('instructions');
+        setStep('enterOtp');
+        Alert.alert('Reset Code Sent', `A 6-digit code was sent to ${targetEmail}. Check your inbox.`);
+      } else if (response.status === 404) {
+        Alert.alert('Email Not Found', 'No account exists for that email address.');
+      } else if (response.status === 408 || (response.error && response.error.toLowerCase().includes('timeout'))) {
+        Alert.alert(
+          'Request Timed Out',
+          'Network timeout while requesting the reset code. Check your connection and try again.',
+          [
+            { text: 'Retry', onPress: () => handleRequestReset() },
+            { text: 'Cancel' }
+          ]
+        );
+      } else {
+        const serverMsg = response.error || (response.data && (response.data.message || JSON.stringify(response.data)));
+        Alert.alert(
+          'Password Reset Requested',
+          serverMsg || 'If an account exists with this email address, you will receive a password reset code.'
+        );
+      }
+    } catch (error: any) {
+      console.error('Password reset request error:', error);
+      const msg = error?.message || '';
+      if (msg.toLowerCase().includes('timeout') || msg === 'Request timeout') {
+        Alert.alert(
+          'Request Timed Out',
+          'Network timeout while requesting the reset code. Check your connection and try again.',
+          [
+            { text: 'Retry', onPress: () => handleRequestReset() },
+            { text: 'Cancel' }
+          ]
+        );
       } else {
         Alert.alert(
           'Password Reset Requested',
-          'If an account exists with this email address, you will receive password reset instructions shortly.',
-          [{ text: 'OK', onPress: onClose }]
+          msg || 'If an account exists with this email address, you will receive a password reset code.'
         );
       }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyAndReset = async () => {
+    if (!otp || otp.length !== 6) {
+      Alert.alert('Invalid OTP', 'Please enter the 6-digit code sent to your email.');
+      return;
+    }
+    if (!newPassword || newPassword.length < 6) {
+      Alert.alert('Invalid Password', 'Password must be at least 6 characters long.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      Alert.alert('Mismatch', 'Passwords do not match.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const targetEmail = (email || userEmail || '').trim();
+      const res = await passwordResetAPI.resetPasswordWithOtp(targetEmail, otp, newPassword);
+      if (res.success) {
+        Alert.alert('Success', 'Your password has been reset. Please log in with your new password.', [{ text: 'OK', onPress: handleClose }]);
+      } else {
+        Alert.alert('Error', res.error || 'Failed to reset password.');
+      }
     } catch (error) {
-      console.error('Password reset request error:', error);
-      Alert.alert(
-        'Password Reset Requested',
-        'If an account exists with this email address, you will receive password reset instructions shortly.',
-        [{ text: 'OK', onPress: onClose }]
-      );
+      console.error('Reset error:', error);
+      Alert.alert('Error', 'Failed to reset password.');
     } finally {
       setIsLoading(false);
     }
@@ -91,35 +151,46 @@ export default function PasswordResetModal({ visible, onClose, userEmail }: Pass
               <Text style={styles.title}>Reset Password</Text>
               <Text style={styles.subtitle}>
                 {step === 'request' 
-                  ? 'We\'ll send you a secure link to reset your password'
-                  : 'Check your email for reset instructions'
+                  ? "Enter your email to receive a 6-digit code (OTP) to reset your password."
+                  : step === 'enterOtp'
+                    ? 'Enter the 6-digit code sent to your email and choose a new password.'
+                    : 'Check your email for the 6-digit code sent to you.'
                 }
               </Text>
             </View>
 
-             {step === 'request' ? (
+            {step === 'request' ? (
                <View style={styles.requestSection}>
                  <View style={styles.emailCard}>
                    <Text style={styles.emailLabel}>Email Address</Text>
                    <View style={styles.emailDisplay}>
-                     <Text style={styles.emailValue}>{userEmail}</Text>
-                     <Text style={styles.emailNote}>This is your registered email address</Text>
+                     <TextInput
+                       style={[styles.input, { paddingVertical: 10, paddingHorizontal: 12, backgroundColor: 'transparent' }]}
+                       value={email}
+                       onChangeText={setEmail}
+                       placeholder="you@domain.com"
+                      placeholderTextColor="#000"
+                       keyboardType="email-address"
+                       autoCapitalize="none"
+                       autoComplete="email"
+                     />
+                     <Text style={styles.emailNote}>Enter the email for your account</Text>
                    </View>
                  </View>
 
                 <View style={styles.infoCard}>
                   <Text style={styles.infoTitle}>What happens next?</Text>
                   <Text style={styles.infoText}>
-                    • You'll receive an email with a secure reset link{'\n'}
-                    • The link expires in 1 hour for security{'\n'}
-                    • Click the link to set a new password{'\n'}
-                    • You can then log in with your new password
+                    • We'll email a 6-digit code (OTP) to the address you provided.{'\n'}
+                    • The code expires in 15 minutes for security.{'\n'}
+                    • Enter the code here and choose a new password.{'\n'}
+                    • The code is single-use and will be invalidated after reset.
                   </Text>
                 </View>
 
                 <View style={styles.buttonContainer}>
                   <LMN8Button
-                    title="Send Reset Email"
+                    title="Send Reset Code"
                     onPress={handleRequestReset}
                     loading={isLoading}
                     fullWidth
@@ -137,35 +208,92 @@ export default function PasswordResetModal({ visible, onClose, userEmail }: Pass
                   />
                 </View>
               </View>
+            ) : step === 'enterOtp' ? (
+              <View style={styles.enterOtpSection}>
+                <View style={styles.emailCard}>
+                  <Text style={styles.emailLabel}>Email</Text>
+                  <Text style={styles.emailValue}>{email || userEmail}</Text>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.emailLabel}>Enter 6-digit code</Text>
+                  <TextInput
+                    style={styles.input}
+                    keyboardType="numeric"
+                    maxLength={6}
+                    value={otp}
+                    onChangeText={setOtp}
+                    placeholder="123456"
+                    placeholderTextColor="#000"
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.emailLabel}>New password</Text>
+                  <TextInput
+                    style={styles.input}
+                    secureTextEntry
+                    value={newPassword}
+                    onChangeText={setNewPassword}
+                    placeholder="New password"
+                    placeholderTextColor="#000"
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.emailLabel}>Confirm password</Text>
+                  <TextInput
+                    style={styles.input}
+                    secureTextEntry
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    placeholder="Confirm password"
+                    placeholderTextColor="#000"
+                  />
+                </View>
+
+                <View style={styles.buttonContainer}>
+                  <LMN8Button
+                    title="Verify & Reset"
+                    onPress={handleVerifyAndReset}
+                    loading={isLoading}
+                    fullWidth
+                    size="large"
+                    style={styles.resetButton}
+                  />
+
+                  <LMN8Button
+                    title="Cancel"
+                    onPress={handleClose}
+                    variant="secondary"
+                    size="medium"
+                    fullWidth
+                    style={styles.cancelButton}
+                  />
+                </View>
+              </View>
             ) : (
               <View style={styles.instructionsSection}>
                 <View style={styles.successCard}>
                   <Text style={styles.successIcon}>📧</Text>
                   <Text style={styles.successTitle}>Email Sent!</Text>
                   <Text style={styles.successText}>
-                    We've sent password reset instructions to:
+                    We've sent password reset OTP to:
                   </Text>
-                   <Text style={styles.successEmail}>{userEmail}</Text>
+                   <Text style={styles.successEmail}>{email || userEmail}</Text>
                 </View>
 
                 <View style={styles.instructionsCard}>
                   <Text style={styles.instructionsTitle}>Next Steps:</Text>
                   <Text style={styles.instructionsText}>
                     1. Check your email inbox (and spam folder){'\n'}
-                    2. Click the "Reset Password" button in the email{'\n'}
+                    2. Copy the 6-digit code from the email and enter it above{'\n'}
                     3. Enter your new password{'\n'}
                     4. Log in with your new credentials
                   </Text>
                 </View>
 
-                <View style={styles.helpCard}>
-                  <Text style={styles.helpTitle}>Need Help?</Text>
-                  <Text style={styles.helpText}>
-                    • Check your spam/junk folder{'\n'}
-                    • The link expires in 1 hour{'\n'}
-                    • Contact support if you don't receive the email
-                  </Text>
-                </View>
+              
 
                 <View style={styles.buttonContainer}>
                   <LMN8Button
@@ -392,6 +520,23 @@ const styles = StyleSheet.create({
     color: LMN8Colors.text85,
     fontSize: 14,
     lineHeight: 20,
+  },
+
+  enterOtpSection: {
+    gap: LMN8Spacing.lg,
+  },
+
+  inputGroup: {
+    marginBottom: LMN8Spacing.md,
+  },
+
+  input: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: LMN8Spacing.md,
+    borderWidth: 1,
+    borderColor: '#e1e1e1',
+    color: '#000000',
   },
 
   buttonContainer: {

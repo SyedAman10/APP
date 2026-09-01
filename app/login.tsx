@@ -7,6 +7,7 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
+import PasswordResetModal from '@/components/PasswordResetModal';
 import {
   Dimensions,
   KeyboardAvoidingView,
@@ -37,6 +38,7 @@ export default function LoginPageDesign3Compact() {
   const [errors, setErrors] = useState<Partial<LoginData>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
 
 
   const validateForm = (): boolean => {
@@ -197,6 +199,10 @@ export default function LoginPageDesign3Compact() {
                   size="large"
                   style={styles.primaryButton}
                 />
+
+                <TouchableOpacity style={{ alignSelf: 'center', marginTop: 10 }} onPress={() => setShowResetModal(true)}>
+                  <Text style={{ color: LMN8Colors.accentPrimary, fontSize: 14 }}>Forgot Password?</Text>
+                </TouchableOpacity>
               </View>
             </View>
           </View>
@@ -222,6 +228,8 @@ export default function LoginPageDesign3Compact() {
         onDismiss={hideAlert}
         type={alert.type}
       />
+
+      <PasswordResetModal visible={showResetModal} onClose={() => setShowResetModal(false)} userEmail={formData.email} />
     </View>
   );
 }

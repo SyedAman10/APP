@@ -369,15 +369,20 @@ export const passwordResetAPI = {
     return api.post('/api/patient-auth/forgot-password', { email });
   },
   
-  // Validate reset token (GET)
+  // Reset password with OTP (POST)
+  resetPasswordWithOtp: async (email: string, otp: string, newPassword: string): Promise<APIResponse> => {
+    console.log('🔑 Resetting password with OTP for email:', email);
+    return api.post('/api/patient-auth/reset-password', { email, otp, newPassword });
+  },
+  
+  // Deprecated token-based methods kept for compatibility
   validateResetToken: async (token: string): Promise<APIResponse> => {
-    console.log('🔍 Validating reset token');
+    console.warn('validateResetToken is deprecated for app users. Use OTP flow.');
     return api.get(`/api/patient-auth/reset-password?token=${token}`);
   },
   
-  // Reset password with token (POST)
   resetPassword: async (token: string, newPassword: string): Promise<APIResponse> => {
-    console.log('🔑 Resetting password with token');
+    console.warn('resetPassword(token) is deprecated for app users. Use resetPasswordWithOtp.');
     return api.post('/api/patient-auth/reset-password', { token, newPassword });
   },
 };
