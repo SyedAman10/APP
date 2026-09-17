@@ -467,6 +467,14 @@ export default function HomeScreen() {
                 <Text style={styles.secondaryActionText}>Community</Text>
               </TouchableOpacity>
             )}
+            <TouchableOpacity 
+              style={styles.secondaryActionCard}
+              onPress={() => router.push('/(main)/homework')}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="clipboard-outline" size={24} color={LMN8Colors.accentPrimary} />
+              <Text style={styles.secondaryActionText}>Homework</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
