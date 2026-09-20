@@ -31,9 +31,9 @@ export default function HomeworkScreen() {
     }
   };
 
-  useEffect(() => { fetchHomework(); }, [patientId]);
+  useEffect(() => { fetchHomework(); }, [patientOrStudentId, user?.userType]);
 
-  const updateStatus = async (id: number, status: string) => {
+  const updateStatus = async (id: number, status: 'completed' | 'not_understood') => {
     setUpdatingId(String(id));
     try {
       const resp = await api.patch('/api/homework', { id, status });
@@ -60,25 +60,31 @@ export default function HomeworkScreen() {
         <FlatList
           data={homework}
           keyExtractor={(item) => String(item.id)}
-          renderItem={({ item }) => (
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.cardTitle}>{item.title || (item.type === 'voice' ? 'Voice Homework' : 'Homework')}</Text>
-                <Text style={styles.cardStatus}>{item.status}</Text>
+          renderItem={({ item }) => {
+            const isCompleted = item.status === 'completed';
+
+            return (
+              <View style={styles.card}>
+                <View style={styles.cardHeader}>
+                  <Text style={styles.cardTitle}>{item.title || (item.type === 'voice' ? 'Voice Homework' : 'Homework')}</Text>
+                  <Text style={[styles.cardStatus, isCompleted && styles.completedStatus]}>{item.status}</Text>
+                </View>
+                <Text style={styles.cardBody}>{item.type === 'text' ? item.content : (item.transcript || 'Voice homework')}</Text>
+                {!isCompleted && (
+                  <View style={styles.actions}>
+                    <TouchableOpacity style={styles.actionBtn} onPress={() => updateStatus(item.id, 'completed')} disabled={updatingId === String(item.id)}>
+                      <Ionicons name="checkmark-done" size={18} color="#fff" />
+                      <Text style={styles.actionText}>Mark Completed</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.actionBtn, styles.warn]} onPress={() => updateStatus(item.id, 'not_understood')} disabled={updatingId === String(item.id)}>
+                      <Ionicons name="help-circle" size={18} color="#fff" />
+                      <Text style={styles.actionText}>Not Understood</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
-              <Text style={styles.cardBody}>{item.type === 'text' ? item.content : (item.transcript || 'Voice homework')}</Text>
-              <View style={styles.actions}>
-                <TouchableOpacity style={styles.actionBtn} onPress={() => updateStatus(item.id, 'completed')} disabled={updatingId === String(item.id)}>
-                  <Ionicons name="checkmark-done" size={18} color="#fff" />
-                  <Text style={styles.actionText}>Mark Completed</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.actionBtn, styles.warn]} onPress={() => updateStatus(item.id, 'not_understood')} disabled={updatingId === String(item.id)}>
-                  <Ionicons name="help-circle" size={18} color="#fff" />
-                  <Text style={styles.actionText}>Not Understood</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
+            );
+          }}
         />
       )}
     </View>
@@ -94,6 +100,7 @@ const styles = StyleSheet.create({
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   cardTitle: { color: '#fff', fontWeight: '600' },
   cardStatus: { color: '#94a3b8', fontSize: 12 },
+  completedStatus: { color: '#22c55e', fontWeight: '700' },
   cardBody: { color: '#cbd5e1', marginBottom: 8 },
   actions: { flexDirection: 'row', gap: 8 },
   actionBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#06b6d4', padding: 8, borderRadius: 8, marginRight: 8 },
