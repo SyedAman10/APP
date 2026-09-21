@@ -1,4 +1,3 @@
-import { AppleWatchSettings } from '@/components/AppleWatchSettings';
 import { CrisisInterventionModal } from '@/components/CrisisInterventionModal';
 import { JourneyThemeCard } from '@/components/JourneyThemeCard';
 import PasswordResetModal from '@/components/PasswordResetModal';
@@ -237,15 +236,7 @@ export default function SettingsScreen() {
             onToggle={(enabled) => enabled ? enableMonitoring() : disableMonitoring()}
             isEnabled={isEnabled}
           />
-        </View> */}
-
-        {/* Apple Watch Integration Section - COMMENTED OUT: no backend endpoint */}
-        {/* <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Health Tracking</Text>
-          <AppleWatchSettings />
-        </View> */}
-
-        {/* Journey Themes Section */}
+        </View> */}{/* Journey Themes Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Journey Customization</Text>
           <JourneyThemeCard />
