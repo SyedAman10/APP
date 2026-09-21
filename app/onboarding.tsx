@@ -130,7 +130,7 @@ export default function OnboardingScreen() {
           supportNeeds: onboardingData.supportNeeds,
         };
         
-        const response = await profileAPI.updateProfile(profileData);
+        const response = await profileAPI.updateProfile(profileData as Partial<import('@/services/APIService').OnboardingRequest>);
         
         if (response.success) {
           console.log('✅ Profile saved successfully:', response.data);

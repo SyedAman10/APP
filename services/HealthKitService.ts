@@ -1,10 +1,22 @@
 import { Platform } from 'react-native';
-import AppleHealthKit, {
-    HealthKitPermissions,
-    HealthValue,
-    HealthValueOptions,
+import type {
+  HealthKitPermissions,
+  HealthValue,
+  HealthValueOptions,
 } from 'react-native-health';
-import { APIService } from './APIService';
+import { api } from './APIService';
+
+// Expo Go does not include this app-specific native module. Loading it only on
+// iOS keeps the native HealthKit integration in development/production builds
+// without preventing Android Expo Go from starting.
+let AppleHealthKit: any = null;
+if (Platform.OS === 'ios') {
+  try {
+    AppleHealthKit = require('react-native-health');
+  } catch {
+    // HealthKit is unavailable in Expo Go; initialization will return false.
+  }
+}
 
 // Dynamically import Health Connect for Android (optional)
 let HealthConnect: any = null;
@@ -49,7 +61,7 @@ export interface HealthDataSummary {
 
 class HealthKitService {
   private isInitialized = false;
-  private syncInterval: NodeJS.Timeout | null = null;
+  private syncInterval: ReturnType<typeof setInterval> | null = null;
 
   // HealthKit permissions we want to request
   private permissions: HealthKitPermissions = {
@@ -72,6 +84,10 @@ class HealthKitService {
    */
   async initialize(): Promise<boolean> {
     if (Platform.OS === 'ios') {
+      if (!AppleHealthKit) {
+        console.log('HealthKit is not available in this build.');
+        return false;
+      }
       // iOS: Use HealthKit
       return new Promise((resolve) => {
         AppleHealthKit.initHealthKit(this.permissions, (error: string) => {
@@ -152,7 +168,7 @@ class HealthKitService {
     if (Platform.OS === 'ios') {
       // iOS: Use HealthKit
       return new Promise((resolve, reject) => {
-        const options: HealthValueOptions = {
+        const options: Partial<HealthValueOptions> = {
           startDate: startDate.toISOString(),
           endDate: endDate.toISOString(),
         };
@@ -170,7 +186,7 @@ class HealthKitService {
               value: sample.value,
               unit: 'bpm',
               timestamp: sample.startDate,
-              source: sample.sourceName || 'Apple Watch',
+              source: (sample as any).sourceName || 'Apple Watch',
             }));
 
             resolve(dataPoints);
@@ -223,7 +239,7 @@ class HealthKitService {
     if (Platform.OS === 'ios') {
       // iOS: Use HealthKit
       return new Promise((resolve, reject) => {
-        const options: HealthValueOptions = {
+        const options: Partial<HealthValueOptions> = {
           startDate: startDate.toISOString(),
           endDate: endDate.toISOString(),
         };
@@ -241,7 +257,7 @@ class HealthKitService {
               value: sample.value,
               unit: 'ms',
               timestamp: sample.startDate,
-              source: sample.sourceName || 'Apple Watch',
+              source: (sample as any).sourceName || 'Apple Watch',
             }));
 
             resolve(dataPoints);
@@ -294,7 +310,7 @@ class HealthKitService {
     if (Platform.OS === 'ios') {
       // iOS: Use HealthKit
       return new Promise((resolve, reject) => {
-        const options: HealthValueOptions = {
+        const options: Partial<HealthValueOptions> = {
           startDate: startDate.toISOString(),
           endDate: endDate.toISOString(),
         };
@@ -372,7 +388,7 @@ class HealthKitService {
     if (Platform.OS === 'ios') {
       // iOS: Use HealthKit
       return new Promise((resolve, reject) => {
-        const options: HealthValueOptions = {
+        const options: Partial<HealthValueOptions> = {
           startDate: startDate.toISOString(),
           endDate: endDate.toISOString(),
         };
@@ -392,7 +408,7 @@ class HealthKitService {
                 value: duration,
                 unit: 'hours',
                 timestamp: sample.startDate,
-                source: sample.sourceName || 'iPhone',
+                source: (sample as any).sourceName || 'iPhone',
               };
             });
 
@@ -518,7 +534,7 @@ class HealthKitService {
         return true;
       }
 
-      const response = await APIService.post('/health-data/sync', {
+      const response = await api.post('/health-data/sync', {
         data: healthData,
         syncedAt: new Date().toISOString(),
       });
@@ -540,10 +556,11 @@ class HealthKitService {
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - daysBack);
 
-      const response = await APIService.get('/health-data/summary', {
+      const query = new URLSearchParams({
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
-      });
+      }).toString();
+      const response = await api.get(`/health-data/summary?${query}`);
 
       return response.data as HealthDataSummary;
     } catch (error) {
@@ -587,7 +604,7 @@ class HealthKitService {
    */
   async deleteAllHealthData(): Promise<boolean> {
     try {
-      const response = await APIService.delete('/health-data');
+      const response = await api.delete('/health-data');
       return response.success;
     } catch (error) {
       console.error('Error deleting health data:', error);

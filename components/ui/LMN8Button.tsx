@@ -7,6 +7,7 @@ import {
     TextStyle,
     TouchableOpacity,
     ViewStyle,
+    StyleProp,
 } from 'react-native';
 
 export interface LMN8ButtonProps {
@@ -17,8 +18,9 @@ export interface LMN8ButtonProps {
   disabled?: boolean;
   loading?: boolean;
   fullWidth?: boolean;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   textStyle?: TextStyle;
+  icon?: string;
 }
 
 export const LMN8Button: React.FC<LMN8ButtonProps> = ({
@@ -31,6 +33,7 @@ export const LMN8Button: React.FC<LMN8ButtonProps> = ({
   fullWidth = false,
   style,
   textStyle,
+  icon: _icon,
 }) => {
   const buttonStyle = [
     styles.base,

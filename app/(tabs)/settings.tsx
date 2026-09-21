@@ -101,8 +101,8 @@ export default function SettingsScreen() {
       if (response.success && response.data) {
         const d = response.data.data || response.data;
         setClinicianSharingPreferences({
-          shareAIConversationSummary: d.shareAIConversationSummary ?? d.share_ai_conversation_summary ?? true,
-          shareJournalEntrySummary: d.shareJournalEntrySummary ?? d.share_journal_entry_summary ?? true,
+          shareAIConversationSummary: d.shareAIConversationSummary ?? (d as any).share_ai_conversation_summary ?? true,
+          shareJournalEntrySummary: d.shareJournalEntrySummary ?? (d as any).share_journal_entry_summary ?? true,
         });
       } else if (response.status !== 401) {
         console.error('Failed to load clinician-sharing preferences:', response.error);
@@ -136,8 +136,8 @@ export default function SettingsScreen() {
       if (response.data?.data) {
         const d = response.data.data;
         setClinicianSharingPreferences({
-          shareAIConversationSummary: d.shareAIConversationSummary ?? d.share_ai_conversation_summary ?? value,
-          shareJournalEntrySummary: d.shareJournalEntrySummary ?? d.share_journal_entry_summary ?? value,
+          shareAIConversationSummary: d.shareAIConversationSummary ?? (d as any).share_ai_conversation_summary ?? value,
+          shareJournalEntrySummary: d.shareJournalEntrySummary ?? (d as any).share_journal_entry_summary ?? value,
         });
       }
     } catch (error) {

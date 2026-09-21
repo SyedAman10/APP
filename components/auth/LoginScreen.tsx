@@ -15,7 +15,7 @@ import { LMN8Input } from '@/components/ui/LMN8Input';
 export interface LoginScreenProps {
   onLogin: (data: LoginData) => Promise<void>;
   onNavigateToSignup: () => void;
-  onForgotPassword?: () => void;
+  onForgotPassword?: (email: string) => void | Promise<void>;
 }
 
 export interface LoginData {
@@ -122,7 +122,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             <View style={styles.forgotPasswordContainer}>
               <LMN8Button
                 title="Forgot Password?"
-                onPress={onForgotPassword}
+                onPress={() => onForgotPassword(formData.email)}
                 variant="secondary"
                 size="small"
               />

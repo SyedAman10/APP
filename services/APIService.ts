@@ -241,6 +241,8 @@ export const aiAPI = {
 };
 
 // Legacy Profile API interface (for backward compatibility)
+export type ProfileData = LegacyProfileData;
+
 export interface LegacyProfileData {
   idol: string;
   personality: string;

@@ -62,6 +62,13 @@ export const LMN8Typography = {
     color: LMN8Colors.text60,
     textTransform: 'uppercase' as const,
   },
+  button: {
+    fontFamily: 'System',
+    fontSize: 16,
+    fontWeight: '600',
+    lineHeight: 22,
+    color: LMN8Colors.text100,
+  },
   metadata: {
     fontFamily: 'System',
     fontSize: 12, // 0.75rem

@@ -21,6 +21,7 @@ export const TherapeuticDashboard: React.FC<TherapeuticDashboardProps> = ({
   onNavigateToSessions,
   onNavigateToGoals,
   onNavigateToProfile,
+  onDebugDatabase,
   onLogout,
 }) => {
   const { currentPatient, sessions, goals, isInitialized } = useDatabase();

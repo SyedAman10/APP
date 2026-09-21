@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
   },
 
   confettiContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     pointerEvents: 'none',
   },
 
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
   },
 
   sparkleContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     pointerEvents: 'none',
   },
 

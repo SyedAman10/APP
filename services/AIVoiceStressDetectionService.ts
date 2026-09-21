@@ -1,5 +1,5 @@
 import { Audio } from 'expo-av';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 // @ts-ignore - fft-js doesn't have TypeScript types
 import FFT from 'fft-js';
 

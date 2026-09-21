@@ -17,6 +17,7 @@ interface DatabaseContextType {
   // Debug methods
   getDatabaseInfo: () => Promise<any>;
   getAllData: () => Promise<any>;
+  databaseService: typeof databaseService;
 }
 
 const DatabaseContext = createContext<DatabaseContextType | undefined>(undefined);
@@ -196,6 +197,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     refreshData,
     getDatabaseInfo: databaseService.getDatabaseInfo.bind(databaseService),
     getAllData: databaseService.getAllData.bind(databaseService),
+    databaseService,
   };
 
   return (
