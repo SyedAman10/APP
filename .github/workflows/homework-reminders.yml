@@ -1,0 +1,11 @@
+name: Homework reminders
+on:
+  schedule:
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+jobs:
+  send-reminders:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create pending-homework reminders
+        run: curl --fail --request POST "${{ secrets.NEXTAUTH_URL }}/api/internal/homework-reminders" --header "Authorization: Bearer ${{ secrets.HOMEWORK_REMINDER_CRON_SECRET }}"
