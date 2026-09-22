@@ -208,6 +208,9 @@ export default function HomeScreen() {
             <Text style={styles.greetingText}>{getGreeting()}</Text>
             <Text style={styles.userName}>{user?.fullName || user?.email?.split('@')[0] || 'Traveler'}</Text>
           </View>
+          <TouchableOpacity style={styles.notificationButton} onPress={() => router.push('/(tabs)/notifications')} accessibilityLabel="Notifications">
+            <Ionicons name="notifications-outline" size={26} color={LMN8Colors.text100} />
+          </TouchableOpacity>
           <Text style={styles.welcomeSubtitle}>
             {user?.patientGreetingName
               ? `Dear ${user.patientGreetingName}, welcome to your healing space`
@@ -279,6 +282,30 @@ export default function HomeScreen() {
           </LinearGradient>
         </TouchableOpacity>
 
+        {/* Assigned Homework */}
+        <TouchableOpacity
+          style={styles.summaryAccessCard}
+          onPress={() => router.push('/(tabs)/homework')}
+          activeOpacity={0.8}
+        >
+          <LinearGradient
+            colors={[`${LMN8Colors.accentPrimary}25`, `${LMN8Colors.accentPrimary}12`]}
+            style={[styles.summaryAccessGradient, styles.homeworkAccessGradient]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <View style={styles.summaryAccessLeft}>
+              <View style={[styles.summaryAccessIcon, styles.homeworkAccessIcon]}>
+                <Ionicons name="clipboard-outline" size={22} color={LMN8Colors.accentPrimary} />
+              </View>
+              <View style={styles.summaryAccessTextWrap}>
+                <Text style={styles.summaryAccessTitle}>Homework</Text>
+                <Text style={styles.summaryAccessText}>View and update homework assigned by your care team.</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={LMN8Colors.text85} />
+          </LinearGradient>
+        </TouchableOpacity>
         {/* Journey Progress */}
         <View style={styles.progressSection}>
           <View style={styles.sectionHeader}>
@@ -555,6 +582,8 @@ const styles = StyleSheet.create({
     marginBottom: LMN8Spacing.xxl,
   },
 
+  notificationButton: { position: 'absolute', top: 0, right: 0, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+
   greetingContainer: {
     marginBottom: LMN8Spacing.sm,
   },
@@ -695,6 +724,13 @@ const styles = StyleSheet.create({
     gap: LMN8Spacing.md,
   },
 
+  homeworkAccessGradient: {
+    borderColor: `${LMN8Colors.accentPrimary}35`,
+  },
+
+  homeworkAccessIcon: {
+    backgroundColor: `${LMN8Colors.accentPrimary}22`,
+  },
   summaryAccessLeft: {
     flexDirection: 'row',
     alignItems: 'center',
