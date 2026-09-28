@@ -34,7 +34,7 @@
       },
       "edgeToEdgeEnabled": false,
       "package": "com.aman121212.METAT8APP",
-      "versionCode": 4,
+      "versionCode": 5,
       "permissions": [
         "android.permission.RECORD_AUDIO"
       ]

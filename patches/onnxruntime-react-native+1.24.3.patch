@@ -1,0 +1,16 @@
+diff --git a/node_modules/onnxruntime-react-native/android/CMakeLists.txt b/node_modules/onnxruntime-react-native/android/CMakeLists.txt
+index 2f814e8..e88ee62 100644
+--- a/node_modules/onnxruntime-react-native/android/CMakeLists.txt
++++ b/node_modules/onnxruntime-react-native/android/CMakeLists.txt
+@@ -80,6 +80,11 @@ add_library(
+   ../cpp/SessionUtils.cpp
+   ../cpp/TensorUtils.cpp)
+ 
++target_link_options(onnxruntimejsi PRIVATE
++  "-Wl,-z,max-page-size=16384"
++  "-Wl,-z,common-page-size=16384"
++)
++
+ # Configure C++ 17
+ set_target_properties(
+   onnxruntimejsi
