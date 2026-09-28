@@ -1,4 +1,3 @@
-import { AppleWatchSettings } from '@/components/AppleWatchSettings';
 import { CrisisInterventionModal } from '@/components/CrisisInterventionModal';
 import { JourneyThemeCard } from '@/components/JourneyThemeCard';
 import PasswordResetModal from '@/components/PasswordResetModal';

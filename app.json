@@ -2,7 +2,7 @@
   "expo": {
     "name": "METAT8",
     "slug": "lmn8",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "lmn8app",
@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.aman121212.METAT8APP",
-      "buildNumber": "3",
+      "buildNumber": "4",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "METAT8 needs microphone access so you can record voice memo journal entries.",
         "NSHealthShareUsageDescription": "METAT8 needs access to your health data to provide personalized mental wellness insights and therapeutic support. Your health data helps us understand stress patterns and provide better care.",
@@ -34,15 +34,9 @@
       },
       "edgeToEdgeEnabled": false,
       "package": "com.aman121212.METAT8APP",
-      "versionCode": 3,
+      "versionCode": 4,
       "permissions": [
-        "android.permission.RECORD_AUDIO",
-        "android.permission.health.READ_HEART_RATE",
-        "android.permission.health.READ_HEART_RATE_VARIABILITY",
-        "android.permission.health.READ_STEPS",
-        "android.permission.health.READ_SLEEP",
-        "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
-        "android.permission.health.READ_RESTING_HEART_RATE"
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -70,13 +64,7 @@
           "backgroundColor": "#ffffff"
         }
       ],
-      "react-native-health",
-      [
-        "react-native-health-connect",
-        {
-          "isBackgroundDeliveryEnabled": true
-        }
-      ]
+      "react-native-health"
     ],
     "experiments": {
       "typedRoutes": true

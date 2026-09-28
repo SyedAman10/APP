@@ -8,7 +8,6 @@ import { LMN8SplashScreen } from '@/components/ui/LMN8SplashScreen';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ChatProvider } from '@/contexts/ChatContext';
 import { DatabaseProvider } from '@/contexts/DatabaseContext';
-import { HealthKitProvider } from '@/contexts/HealthKitContext';
 import { OnboardingProvider } from '@/contexts/OnboardingContext';
 import { VoiceStressProvider } from '@/contexts/VoiceStressContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -30,8 +29,7 @@ export default function RootLayout() {
     <DatabaseProvider>
       <AuthProvider>
         <OnboardingProvider>
-          <HealthKitProvider>
-            <VoiceStressProvider>
+          <VoiceStressProvider>
               <ChatProvider>
                 <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
                   <Stack>
@@ -49,8 +47,7 @@ export default function RootLayout() {
                   <StatusBar style="auto" />
                 </ThemeProvider>
               </ChatProvider>
-            </VoiceStressProvider>
-          </HealthKitProvider>
+          </VoiceStressProvider>
         </OnboardingProvider>
       </AuthProvider>
     </DatabaseProvider>
